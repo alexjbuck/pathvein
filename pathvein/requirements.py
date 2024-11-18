@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
-from typing import Self, Any
+from typing import Iterable, Self, Any
 import shutil
 from fnmatch import fnmatch
 from pathlib import Path
 import json
+from copy import deepcopy
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FileStructureRequirement:
+    """
+    A class to represent a file structure requirements
+
+    This class also supports a builder pattern as any intermediate state is also valid.
+    """
+
     directory_name: str | None = None
     files: list[str] = field(default_factory=list)
     directories: list[Self] = field(default_factory=list)
@@ -37,27 +44,83 @@ class FileStructureRequirement:
     @classmethod
     def load_json(cls, json_path: Path) -> Self:
         json_str = json_path.read_text()
-        requirement_spec = json.loads(json_str)
-        return cls.from_json(requirement_spec)
+        return cls.from_json(json_str)
 
     @classmethod
-    def from_json(cls, spec: dict) -> Self:
-        root = cls()
-        root.directory_name = spec.get("directory_name")
-        root.files = spec.get("files", [])
-        root.optional_files = spec.get("optional_files", [])
-        root.directories = [
-            cls.from_json(subdirectory_spec)
-            for subdirectory_spec in spec.get("directories", [])
-        ]
-        root.optional_directories = [
-            cls.from_json(subdirectory_spec)
-            for subdirectory_spec in spec.get("optional_directories", [])
-        ]
-        return root
+    def from_json(cls, spec_str: str) -> Self:
+        spec = json.loads(spec_str)
+        return (
+            cls()
+            .set_name(spec.get("directory_name"))
+            .add_files(spec.get("files", []), required=True)
+            .add_files(spec.get("optional_files", []), required=False)
+            .add_directories(
+                (
+                    cls.from_json(subdirectory_spec)
+                    for subdirectory_spec in spec.get("directories", [])
+                ),
+                required=True,
+            )
+            .add_directories(
+                (
+                    cls.from_json(subdirectory_spec)
+                    for subdirectory_spec in spec.get("optional_directories", [])
+                ),
+                required=False,
+            )
+        )
 
     def to_json(self: Self) -> str:
-        return ""
+        # Deepcopy prevents mutating self during serialization.
+        # self__dict__ and dictionary point to the same object otherwise.
+        dictionary = deepcopy(self.__dict__)
+        dictionary["directories"] = [
+            directory.to_json() for directory in self.directories
+        ]
+        dictionary["optional_directories"] = [
+            directory.to_json() for directory in self.optional_directories
+        ]
+        return json.dumps(dictionary)
+
+    def add_directory(self: Self, directory: Self, required: bool = True) -> Self:
+        """
+        Add a FileStructureRequirement entry to the (optional) directory list
+
+        This method uses deepcopy to prevent recursive references. This means it supports
+        ```python
+        requirement = FileStructureRequirement()
+        requirement.add_directory(requirement)
+        ```
+        This keeps the two requirements as separate objects so as to not create a reference loop.
+        """
+        if required:
+            self.directories.append(deepcopy(directory))
+        else:
+            self.optional_directories.append(deepcopy(directory))
+        return self
+
+    def add_directories(
+        self: Self, directories: Iterable[Self], required: bool = True
+    ) -> Self:
+        for directory in directories:
+            self.add_directory(directory, required)
+        return self
+
+    def add_file(self: Self, file: str, required: bool = True) -> Self:
+        if required:
+            self.files.append(file)
+        else:
+            self.optional_files.append(file)
+        return self
+
+    def add_files(self: Self, files: Iterable[str], required: bool = True) -> Self:
+        for file in files:
+            self.add_file(file, required)
+        return self
+
+    def set_name(self: Self, name: str | None) -> Self:
+        self.directory_name = name
+        return self
 
     @property
     def all_files(self: Self) -> list[str]:
