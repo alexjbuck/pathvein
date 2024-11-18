@@ -1,0 +1,36 @@
+[project]
+name = "pathvein"
+version = "0.4.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["python-slugify>=8.0.4", "tqdm>=4.67.0", "typer>=0.13.0"]
+
+[project.scripts]
+pathvein = "pathvein:cli"
+
+[dependency-groups]
+dev = [
+    "commitizen>=3.30.1",
+    "mypy>=1.13.0",
+    "python-lsp-server[all]>=1.12.0",
+    "ruff>=0.7.3",
+]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "pep440"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+only-include = ["pathvein", "tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pathvein"]

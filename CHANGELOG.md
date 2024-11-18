@@ -1,0 +1,25 @@
+## 0.4.0 (2024-11-16)
+
+### Feat
+
+- **ci**: Add CI pipeline to create GitLab releases on new tags
+
+### Fix
+
+- **uv**: Add updated uv.lock file
+
+## 0.3.0 (2024-11-16)
+
+### BREAKING CHANGE
+
+- Entry point is now called `org`, which is also `organizer.cli`
+
+### Feat
+
+- **project**: Refactor into package and update pyproject to support building wheel and sdist
+
+## 0.2.0 (2024-11-15)
+
+### Feat
+
+- **project**: Add commitizen as a dev dependency
