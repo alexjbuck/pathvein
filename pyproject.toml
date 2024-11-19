@@ -1,21 +1,16 @@
 [project]
 name = "pathvein"
-version = "0.4.0"
+version = "0.5.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["python-slugify>=8.0.4", "tqdm>=4.67.0", "typer>=0.13.0"]
+dependencies = []
 
 [project.scripts]
-pathvein = "pathvein:cli"
+pathvein = "pathvein.cli:main"
 
-[dependency-groups]
-dev = [
-    "commitizen>=3.30.1",
-    "mypy>=1.13.0",
-    "python-lsp-server[all]>=1.12.0",
-    "ruff>=0.7.3",
-]
+[project.optional-dependencies]
+cli = ["typer>=0.13.1"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -30,7 +25,22 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.sdist]
-only-include = ["pathvein", "tests"]
+only-include = ["pathvein", "tests", "Makefile"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["pathvein"]
+
+[tool.uv]
+dev-dependencies = [
+    "commitizen>=3.31.0",
+    "mypy>=1.13.0",
+    "pytest-cov>=6.0.0",
+    "pytest>=8.3.3",
+    "ruff>=0.6.9",
+    "spear-ai-ruff-config>=5.0.0",
+    "hypothesis>=6.119.3",
+    "universal-pathlib>=0.2.5",
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov=pathvein --cov-report html --cov-report term --hypothesis-show-statistics"

@@ -1,4 +1,4 @@
-from pathvein.lib import cli as cli
-from pathvein.requirements import FileStructureRequirement
+from pathvein.pattern import FileStructurePattern
+from pathvein.lib import scan, shuffle
 
-__all__ = ["cli", "FileStructureRequirement"]
+__all__ = ["FileStructurePattern", "scan", "shuffle"]

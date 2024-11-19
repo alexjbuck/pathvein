@@ -1,0 +1,28 @@
+name: Build and check
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+  push:
+    branches:
+      - main
+jobs:
+  check:
+    name: Build and check
+    runs-on: linux-x64-ubuntu-latest-4cpu-16gb-150gb
+    timeout-minutes: 25
+    steps:
+      - name: Checkout Git repository
+        uses: actions/checkout@v4.1.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Check
+        run: make check
+      - name: Test
+        run: make test
+      - name: Build
+        run: make build

@@ -1,19 +1,19 @@
-from dataclasses import dataclass, field
-from typing import Iterable, Self, Any
+import json
+import logging
 import shutil
+from copy import deepcopy
+from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
-import json
-from copy import deepcopy
-import logging
+from typing import Any, Iterable, Self
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class FileStructureRequirement:
+class FileStructurePattern:
     """
-    A representation of a file structure requirement.
+    A representation of a file structure pattern with required and optional components.
 
     This class also supports a builder pattern as any intermediate state is also valid.
     """
@@ -37,7 +37,7 @@ class FileStructureRequirement:
         return hash(self.__key())
 
     def __eq__(self: Self, other: Any):
-        if isinstance(other, FileStructureRequirement):
+        if isinstance(other, FileStructurePattern):
             return self.__key() == other.__key()
         return NotImplemented
 
@@ -51,22 +51,21 @@ class FileStructureRequirement:
         spec = json.loads(spec_str)
         return (
             cls()
-            .set_name(spec.get("directory_name"))
-            .add_files(spec.get("files", []), required=True)
-            .add_files(spec.get("optional_files", []), required=False)
+            .set_directory_name(spec.get("directory_name"))
+            .add_files(spec.get("files", []))
+            .add_files(spec.get("optional_files", []), is_optional=True)
             .add_directories(
                 (
                     cls.from_json(subdirectory_spec)
                     for subdirectory_spec in spec.get("directories", [])
-                ),
-                required=True,
+                )
             )
             .add_directories(
                 (
                     cls.from_json(subdirectory_spec)
                     for subdirectory_spec in spec.get("optional_directories", [])
                 ),
-                required=False,
+                is_optional=True,
             )
         )
 
@@ -82,7 +81,7 @@ class FileStructureRequirement:
         ]
         return json.dumps(dictionary)
 
-    def add_directory(self: Self, directory: Self, required: bool = True) -> Self:
+    def add_directory(self: Self, directory: Self, is_optional: bool = False) -> Self:
         """
         Add a FileStructureRequirement entry to the (optional) directory list
 
@@ -93,32 +92,32 @@ class FileStructureRequirement:
         ```
         This keeps the two requirements as separate objects so as to not create a reference loop.
         """
-        if required:
-            self.directories.append(deepcopy(directory))
-        else:
+        if is_optional:
             self.optional_directories.append(deepcopy(directory))
+        else:
+            self.directories.append(deepcopy(directory))
         return self
 
     def add_directories(
-        self: Self, directories: Iterable[Self], required: bool = True
+        self: Self, directories: Iterable[Self], is_optional: bool = False
     ) -> Self:
         for directory in directories:
-            self.add_directory(directory, required)
+            self.add_directory(directory, is_optional)
         return self
 
-    def add_file(self: Self, file: str, required: bool = True) -> Self:
-        if required:
-            self.files.append(file)
-        else:
+    def add_file(self: Self, file: str, is_optional: bool = False) -> Self:
+        if is_optional:
             self.optional_files.append(file)
+        else:
+            self.files.append(file)
         return self
 
-    def add_files(self: Self, files: Iterable[str], required: bool = True) -> Self:
+    def add_files(self: Self, files: Iterable[str], is_optional: bool = False) -> Self:
         for file in files:
-            self.add_file(file, required)
+            self.add_file(file, is_optional)
         return self
 
-    def set_name(self: Self, name: str | None) -> Self:
+    def set_directory_name(self: Self, name: str | None) -> Self:
         self.directory_name = name
         return self
 
@@ -218,15 +217,13 @@ class FileStructureRequirement:
                 )
 
         # Recurse into any directories at this level that match a required or optional directory pattern
-        directories = (
-            directory for directory in source.iterdir() if directory.is_dir()
-        )
-        for directory in directories:
+        paths = (path for path in source.iterdir() if path.is_dir())
+        for path in paths:
             for branch in self.all_directories:
-                if branch.matches(next(directory.walk())):
+                if branch.matches(next(path.walk())):
                     branch.copy(
-                        directory,
-                        destination / directory.name,
+                        path,
+                        destination / path.name,
                         overwrite=overwrite,
                         dryrun=dryrun,
                     )
