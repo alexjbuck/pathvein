@@ -1,3 +1,19 @@
+## 0.5.1 (2024-11-19)
+
+### Fix
+
+- **ci**: Change runs-on setting for build and check workflow
+
+## 0.5.0 (2024-11-19)
+
+### Feat
+
+- **library**: Restructure pathvein library and extract cli into separate optional module
+
+### Fix
+
+- **uv**: Update lockfile
+
 ## 0.4.0 (2024-11-16)
 
 ### Feat
