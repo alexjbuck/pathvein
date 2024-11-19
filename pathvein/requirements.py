@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileStructureRequirement:
     """
-    A class to represent a file structure requirements
+    A representation of a file structure requirement.
 
     This class also supports a builder pattern as any intermediate state is also valid.
     """
@@ -232,26 +232,3 @@ class FileStructureRequirement:
                     )
 
         logger.info("%sFinished copying %s to %s", dryrun_pad, source, destination)
-
-
-IVER_REQUIREMENTS = FileStructureRequirement(
-    directories=[
-        FileStructureRequirement(directory_name="Mission", files=["*.misx"]),
-        FileStructureRequirement(directory_name="Logs", files=["*.log"]),
-    ],
-    optional_directories=[
-        FileStructureRequirement(directory_name="Sonar", files=["*"]),
-        FileStructureRequirement(directory_name="Sensor", files=["*"]),
-    ],
-)
-
-REMUS_REQUIREMENTS = FileStructureRequirement(
-    directories=[
-        FileStructureRequirement(
-            files=["*State.csv"],
-            optional_files=["*FaultLog.txt", "*Faults.txt", "*Battery.csv"],
-        )
-    ],
-    optional_directories=[FileStructureRequirement(files=["*.rmf"])],
-    optional_files=["*.csv"],
-)
