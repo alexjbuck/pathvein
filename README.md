@@ -11,8 +11,7 @@
   <p>
     <a href="https://pypi.org/project/pathvein/">
       <img alt="PyPI" src="https://img.shields.io/pypi/v/pathvein?color=yellow">
-    </a>
-    <a href="https://github.com/alexjbuck/pathvein/actions/workflows/check.yaml">
+    </a> <a href="https://github.com/alexjbuck/pathvein/actions/workflows/check.yaml">
       <img alt="Checks" src="https://github.com/alexjbuck/pathvein/actions/workflows/check.yaml/badge.svg">
     </a>
   </p>
