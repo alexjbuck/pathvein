@@ -6,7 +6,7 @@
   <p>
     <b>Pathvein</b>
     <br />
-    Deep file structure matching
+    Rich and deep file structure pattern matching
   </p>
   <p>
     <a href="https://github.com/alexjbuck/pathvein/actions/workflows/check.yaml">
@@ -15,10 +15,6 @@
   </p>
 </div>
 <!-- markdownlint-restore MD033 MD041 -->
-
-# Pathvein
-
-Rich and deep file structure pattern matching.
 
 ## Library usage
 
