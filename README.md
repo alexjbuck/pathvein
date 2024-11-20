@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD033 MD041 -->
 <div align="center">
   <picture>
-    <img alt="" src="logo.png" width="96">
+    <img alt="" src="logo.png" width="128">
   </picture>
   <p>
     <b>Pathvein</b>

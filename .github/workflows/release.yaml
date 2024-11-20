@@ -9,6 +9,7 @@ jobs:
   changesets:
     name: Changesets
     runs-on: ubuntu-latest
+    environment: pypi
     outputs:
       should-deploy: ${{ steps.changesets.outputs.hasChangesets == 'false' }}
     permissions: write-all
