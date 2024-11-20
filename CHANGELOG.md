@@ -1,5 +1,11 @@
 ## 0.5.3 (2024-11-19)
 
+## 0.5.5
+
+### Patch Changes
+
+- 7d7878a: Resize logo in readme
+
 ## 0.5.4
 
 ### Patch Changes
