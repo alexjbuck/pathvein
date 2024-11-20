@@ -19,7 +19,7 @@
     "check:ruff:fix": "uv run --all-extras ruff check --fix .",
     "test": "yarn run test:pytest",
     "test:pytest": "uv run --all-extras pytest",
-    "publish": "uv publish --repository pypi",
+    "publish": "uv publish",
     "sync-versions": "tsx sync-versions",
     "version": "changeset version && yarn run sync-versions"
   }
