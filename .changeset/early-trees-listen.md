@@ -1,0 +1,5 @@
+---
+"pathvein": patch
+---
+
+Fix logging

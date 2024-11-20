@@ -8,7 +8,7 @@ context_settings = {
     "help_option_names": ["-h", "--help"],
 }
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 cli = typer.Typer(context_settings=context_settings)
 
@@ -21,8 +21,7 @@ def set_logger_level(verbosity: int, default: int = logging.ERROR) -> None:
 
     verbosity = # of -v flags passed
 
-    default = 30 = logging.ERROR
-
+    default         = 40 = logging.ERROR
     level with -v   = 30 = logging.WARNING
     level with -vv  = 20 = logging.INFO
     level with -vvv = 10 = logging.DEBUG
@@ -37,7 +36,9 @@ def cli_scan(
     verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
 ) -> None:
     set_logger_level(verbosity)
-    scan(path, pattern_spec_paths)
+    matches = scan(path, pattern_spec_paths)
+    for match in matches:
+        print(match[0].as_posix())
 
 
 @cli.command("shuffle")
@@ -50,7 +51,10 @@ def cli_shuffle(
     verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
 ) -> None:
     set_logger_level(verbosity)
-    shuffle(source, destination, pattern_spec_paths, overwrite, dryrun)
+    results = shuffle(source, destination, pattern_spec_paths, overwrite, dryrun)
+    for result in results:
+        print(f"{result.source.as_posix()} -> {result.destination.as_posix()}")
+    print(f"Copied {len(results)} directories")
 
 
 def main():

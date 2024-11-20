@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD033 MD041 -->
 <div align="center">
   <picture>
-    <img alt="" src="pathvein.png" width="96">
+    <img alt="" src="logo.png" width="96">
   </picture>
   <p>
     <b>Pathvein</b>
@@ -31,33 +31,52 @@ pattern = FileStructurePattern(directory_name = "...",                          
                                directories = [FileStructurePattern(...)],         # list[Self]
                                optional_files = ["*.py", "main.rs"],              # list[str]
                                optional_directories = [FileStructurePattern(...)] # list[Self]
+
+# Export a pattern to a file
 Path("pattern.config").write_text(pattern.to_json())
 
-
 # Recursively scan a directory path for directory structures that match the requirements
-matches = scan(source=Path("source"),
-               pattern_spec_paths=[Path("pattern.config")])
+matches = scan(source=Path("source"),                       # Path
+               pattern_spec_paths=[Path("pattern.config")]) # list[Path]
 
 # Recursively scan a source path for pattern-spec directory structures and copy them to the destination
-shuffle(source=Path("source"),
-        destination=Path("dest"),
-        pattern_spec_paths=[Path("pattern.config")],
-        overwrite=False,
-        dryrun=False)
+shuffle(source=Path("source"),                       # Path
+        destination=Path("dest"),                    # Path
+        pattern_spec_paths=[Path("pattern.config")], # list[Self]
+        overwrite=False,                             # bool
+        dryrun=False)                                # bool
 ```
 
 ## CLI usage
 
 ```shell
 # Install using your favorite python package installer
-uv pip install pathvein[cli]
+$ uv pip install pathvein[cli]
 
 # View the commandline interface help
-pathvein --help
+$ pathvein --help
+uv run pathvein -h
+
+ Usage: pathvein [OPTIONS] COMMAND [ARGS]...
+
+╭─ Options ─────────────────────────────────────────────────────────────────────────────╮
+│ --install-completion            Install completion for the current shell.             │
+│ --show-completion               Show completion for the current shell, to copy it or  │
+│                                 customize the installation.                           │
+│ --help                -h        Show this message and exit.                           │
+╰───────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ────────────────────────────────────────────────────────────────────────────╮
+│ scan                                                                                  │
+│ shuffle                                                                               │
+╰───────────────────────────────────────────────────────────────────────────────────────╯
 
 # Scan a directory path
 # pathvein scan <scan path> --pattern <pattern file>
-pathvein scan source_dir --pattern pattern.config
+$ pathvein scan source_dir --pattern pattern.config
+/source_dir/first/match/path
+/source_dir/second/match/path
+/source_dir/third/match/path
+...
 
 
 # Scan a directory path and move all matches to a destination directory
