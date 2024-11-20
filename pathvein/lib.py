@@ -7,15 +7,15 @@ logger = logging.getLogger(__name__)
 
 
 def scan(
-    path: Path,
+    source: Path,
     pattern_spec_paths: Iterable[Path],
 ) -> set[tuple[Path, FileStructurePattern]]:
     """Recursively scan a directory path for directory structures that match the requirements"""
 
-    logger.info("Beginning scan of %s", path.as_posix())
+    logger.info("Beginning scan of %s", source.as_posix())
 
     # Resolve to real paths to ensure that things like .exist() and .is_dir() work correctly
-    path = path.resolve()
+    source = source.resolve()
 
     requirements = [FileStructurePattern.load_json(path) for path in pattern_spec_paths]
 
@@ -23,7 +23,7 @@ def scan(
         logger.debug("Scanning for paths that match structure: %s", structure)
 
     matches = set()
-    for dirpath, dirnames, filenames in path.walk():
+    for dirpath, dirnames, filenames in source.walk():
         logger.debug("Path.walk: (%s, %s, %s)", dirpath, dirnames, filenames)
         for structure in requirements:
             if structure.matches((dirpath, dirnames, filenames)):
@@ -42,7 +42,7 @@ def shuffle(
     overwrite: bool = False,
     dryrun: bool = False,
 ) -> None:
-    """Recursively scan a source path for mission-like directory structures and copy them to the destination."""
+    """Recursively scan a source path for pattern-spec directory structures and copy them to the destination."""
     matches = scan(source, pattern_spec_paths)
 
     logger.info("Beginning shuffle organization of %s to %s", source, destination)

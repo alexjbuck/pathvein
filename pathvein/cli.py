@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Iterable
+from typing import Annotated
 from .lib import scan, shuffle
 import logging
 import typer
@@ -33,7 +33,7 @@ def set_logger_level(verbosity: int, default: int = logging.ERROR) -> None:
 @cli.command("scan")
 def cli_scan(
     path: Path,
-    pattern_spec_paths: Annotated[Iterable[Path], typer.Option("--pattern", "-p")],
+    pattern_spec_paths: Annotated[list[Path], typer.Option("--pattern", "-p")],
     verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
 ) -> None:
     set_logger_level(verbosity)
@@ -44,7 +44,7 @@ def cli_scan(
 def cli_shuffle(
     source: Path,
     destination: Path,
-    pattern_spec_paths: Annotated[Iterable[Path], typer.Option("--pattern", "-p")],
+    pattern_spec_paths: Annotated[list[Path], typer.Option("--pattern", "-p")],
     overwrite: bool = False,
     dryrun: bool = False,
     verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
