@@ -12,18 +12,6 @@ pathvein = "pathvein.cli:main"
 [project.optional-dependencies]
 cli = ["typer>=0.13.1"]
 
-[tool.commitizen]
-name = "cz_conventional_commits"
-tag_format = "$version"
-version_scheme = "pep440"
-version_provider = "pep621"
-update_changelog_on_bump = true
-major_version_zero = true
-version_files = [
-    "pyproject.toml:version",         # Updates version in [tool.commitizen]
-    "pyproject.toml:project.version", # Updates version in [project]
-]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -36,7 +24,6 @@ packages = ["pathvein"]
 
 [tool.uv]
 dev-dependencies = [
-    "commitizen>=3.31.0",
     "mypy>=1.13.0",
     "pytest-cov>=6.0.0",
     "pytest>=8.3.3",
