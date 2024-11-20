@@ -45,7 +45,7 @@ jobs:
         run: yarn run build
       - id: changesets
         name: Run Changesets — Create a Release Pull Request or merge a Release Pull Request
-        uses: changesets/action@v1.4
+        uses: changesets/action@v1.4.9
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
