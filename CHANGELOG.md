@@ -1,5 +1,14 @@
 ## 0.5.3 (2024-11-19)
 
+## 0.5.4
+
+### Patch Changes
+
+- 4f1ff47: Fix type annotation error in typer cli arguments
+- 4f1ff47: Fix logging
+- 9853a72: Update ci and add yarn ecosystem to use changesets
+- 4f1ff47: Update README
+
 ## 0.5.2
 
 ### Patch Changes
