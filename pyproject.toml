@@ -1,6 +1,6 @@
 [project]
 name = "pathvein"
-version = "0.5.5"
+version = "0.5.6"
 description = "Rich and deep file structure pattern matching."
 readme = "README.md"
 requires-python = ">=3.13"

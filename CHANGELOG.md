@@ -1,5 +1,11 @@
 ## 0.5.3 (2024-11-19)
 
+## 0.5.6
+
+### Patch Changes
+
+- 76fb3ba: Update README
+
 ## 0.5.5
 
 ### Patch Changes
