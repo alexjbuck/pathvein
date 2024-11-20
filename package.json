@@ -11,10 +11,10 @@
   },
   "scripts": {
     "build": "uv build",
-    "check": "yarn run check:format && yarn run check:lint && yarn run check:mypy && yarn run test",
+    "check": "yarn run check:format && yarn run check:ruff && yarn run check:mypy && yarn run test",
     "check:format": "uv run --all-extras ruff format --check .",
     "check:format:fix": "uv run --all-extras ruff format .",
-    "check:mypy": "uv run --all-extras ruff mypy pathvein",
+    "check:mypy": "uv run --all-extras mypy pathvein",
     "check:ruff": "uv run --all-extras ruff check .",
     "check:ruff:fix": "uv run --all-extras ruff check --fix .",
     "test": "yarn run test:pytest",
