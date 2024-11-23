@@ -23,9 +23,16 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.1.0
+        with:
+          cache: yarn
+          node-version-file: .node-version
+      - name: Install Node.js dependencies
+        run: yarn install
       - name: Check
-        run: make check
-      - name: Test
-        run: make test
+        run: yarn check
       - name: Build
-        run: make build
+        run: yarn build
