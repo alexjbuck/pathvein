@@ -1,5 +1,11 @@
 # pathvein
 
+## 0.6.2
+
+### Patch Changes
+
+- [#15](https://github.com/alexjbuck/pathvein/pull/15) [`bd3f34a`](https://github.com/alexjbuck/pathvein/commit/bd3f34a6ea8038171b84c00f03b2af02e3b391eb) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Fix CI to remove use of make
+
 ## 0.6.1
 
 ### Patch Changes
