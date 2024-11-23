@@ -2,8 +2,6 @@ import logging
 from pathlib import Path
 from typing import Callable, Iterable, List, NamedTuple, Set
 
-from upath import UPath
-
 from ._path_utils import walk
 from .pattern import FileStructurePattern
 
@@ -50,9 +48,6 @@ def scan(
     for dirpath, dirnames, filenames in walk(source):
         logger.debug("Path.walk: (%s, %s, %s)", dirpath, dirnames, filenames)
         # Expclicitly ensure walk results are the correct types
-        dirpath = UPath(dirpath)
-        dirnames = list(dirnames)
-        filenames = list(filenames)
         for pattern in patterns:
             if pattern.matches((dirpath, dirnames, filenames)):
                 logger.debug("Matched structure %s in %s", pattern, dirpath)
