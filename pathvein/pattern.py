@@ -5,7 +5,10 @@ from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Iterable, List, Optional, Tuple
+
 from typing_extensions import Self
+
+from ._path_utils import stream_copy, walk
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +173,7 @@ class FileStructurePattern:
         for branch in self.directories:
             # The failing case is when no directories match the requirement, aka all directories do not match the branch
             if all(
-                not branch.matches(next((dirpath / directory).walk()), depth + 1)
+                not branch.matches(next(walk(dirpath / directory)), depth + 1)
                 for directory in dirnames
             ):
                 logger.debug(
@@ -227,7 +230,7 @@ class FileStructurePattern:
         paths = (path for path in source.iterdir() if path.is_dir())
         for path in paths:
             for branch in self.all_directories:
-                if branch.matches(next(path.walk())):
+                if branch.matches(next(walk(path))):
                     branch.copy(
                         path,
                         destination / path.name,
@@ -236,15 +239,3 @@ class FileStructurePattern:
                     )
 
         logger.info("%sFinished copying %s to %s", dryrun_pad, source, destination)
-
-
-def stream_copy(source: Path, destination: Path, buffer_size=65536) -> None:
-    """Copy a file from source to destination using a streaming copy"""
-    logger.debug("Starting copy bytes from %s to %s", source, destination)
-    with destination.open("wb") as writer, source.open("rb") as reader:
-        while True:
-            chunk = reader.read(buffer_size)
-            if not chunk:
-                break
-            writer.write(chunk)
-            logger.error("... Copying bytes from %s to %s", source, destination)
