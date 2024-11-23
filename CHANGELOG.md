@@ -1,5 +1,24 @@
 ## 0.5.3 (2024-11-19)
 
+## 0.6.0
+
+### Minor Changes
+
+- c6e5589: BREAKING CHANGE: Change the library scan and shuffle API.
+
+  The library scan and shuffle functions have been made orthogonal and to accept in-memory objects
+  instead of taking file paths.
+
+  Added `shuffle_to` and `shuffle_with` to allow shuffling to a fixed destination or shuffling to
+  a destination defined by some function for each match result from `scan`.
+
+- c6e5589: Add initial prop-testing suite. Coverage improving
+
+### Patch Changes
+
+- c6e5589: Fix bug preventing pattern matching to occur during scan
+- c6e5589: Remove shutil copy and pathlib.Path.walk or os.walk
+
 ## 0.5.6
 
 ### Patch Changes
