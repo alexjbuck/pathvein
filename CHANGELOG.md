@@ -1,5 +1,15 @@
 ## 0.5.3 (2024-11-19)
 
+## 0.6.1
+
+### Patch Changes
+
+- 6901fdf: (ci) Fix configuration for creating GitHub releases from changesets
+- b4674f8: (docs) Update README to reflect breaking changes to the API
+- b4674f8: Bump cross-spawn version to 7.0.6 to resolve security audit
+
+  Security audit recommends >=6.0.6 and flags <6.0.6
+
 ## 0.6.0
 
 ### Minor Changes
