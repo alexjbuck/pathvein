@@ -1,6 +1,6 @@
 {
   "name": "pathvein",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "packageManager": "yarn@4.5.1",
   "type": "module",
   "devDependencies": {
