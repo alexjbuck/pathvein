@@ -1,8 +1,13 @@
-from pathlib import Path
-from typing import Annotated
-from .lib import scan, shuffle
 import logging
+from pathlib import Path
+from typing import List
+
 import typer
+from typing_extensions import Annotated
+
+from pathvein.pattern import FileStructurePattern
+
+from .lib import scan, shuffle_to
 
 context_settings = {
     "help_option_names": ["-h", "--help"],
@@ -31,27 +36,38 @@ def set_logger_level(verbosity: int, default: int = logging.ERROR) -> None:
 
 @cli.command("scan")
 def cli_scan(
-    path: Path,
-    pattern_spec_paths: Annotated[list[Path], typer.Option("--pattern", "-p")],
+    source: Path,
+    pattern_spec_paths: Annotated[List[Path], typer.Option("--pattern", "-p")],
     verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
 ) -> None:
     set_logger_level(verbosity)
-    matches = scan(path, pattern_spec_paths)
+
+    patterns = (FileStructurePattern.load_json(path) for path in pattern_spec_paths)
+    matches = scan(source, patterns)
     for match in matches:
-        print(match[0].as_posix())
+        print(match.source.as_posix())
 
 
 @cli.command("shuffle")
 def cli_shuffle(
     source: Path,
     destination: Path,
-    pattern_spec_paths: Annotated[list[Path], typer.Option("--pattern", "-p")],
+    pattern_spec_paths: Annotated[List[Path], typer.Option("--pattern", "-p")],
     overwrite: bool = False,
     dryrun: bool = False,
     verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
 ) -> None:
     set_logger_level(verbosity)
-    results = shuffle(source, destination, pattern_spec_paths, overwrite, dryrun)
+    logger.info("Beginning shuffle matches from %s to %s", destination)
+
+    patterns = (FileStructurePattern.load_json(path) for path in pattern_spec_paths)
+    matches = scan(source, patterns)
+
+    print("This operation will copy the following directories:")
+    for match in matches:
+        print(match.source.as_posix())
+
+    results = shuffle_to(matches, destination, overwrite, dryrun)
     for result in results:
         print(f"{result.source.as_posix()} -> {result.destination.as_posix()}")
     print(f"Copied {len(results)} directories")

@@ -1,11 +1,11 @@
 import json
 import logging
-import shutil
 from copy import deepcopy
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Iterable, Self
+from typing import Any, Iterable, List, Optional, Tuple
+from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +18,11 @@ class FileStructurePattern:
     This class also supports a builder pattern as any intermediate state is also valid.
     """
 
-    directory_name: str | None = None
-    files: list[str] = field(default_factory=list)
-    directories: list[Self] = field(default_factory=list)
-    optional_files: list[str] = field(default_factory=list)
-    optional_directories: list[Self] = field(default_factory=list)
+    directory_name: Optional[str] = None
+    files: List[str] = field(default_factory=list)
+    directories: List[Self] = field(default_factory=list)
+    optional_files: List[str] = field(default_factory=list)
+    optional_directories: List[Self] = field(default_factory=list)
 
     def __key(self: Self):
         return (
@@ -117,20 +117,20 @@ class FileStructurePattern:
             self.add_file(file, is_optional)
         return self
 
-    def set_directory_name(self: Self, name: str | None) -> Self:
+    def set_directory_name(self: Self, name: Optional[str]) -> Self:
         self.directory_name = name
         return self
 
     @property
-    def all_files(self: Self) -> list[str]:
+    def all_files(self: Self) -> List[str]:
         return list(set(self.files) | set(self.optional_files))
 
     @property
-    def all_directories(self: Self) -> list[Self]:
+    def all_directories(self: Self) -> List[Self]:
         return list(set(self.directories) | set(self.optional_directories))
 
     def matches(
-        self: Self, walk_args: tuple[Path, list[str], list[str]], depth: int = 1
+        self: Self, walk_args: Tuple[Path, List[str], List[str]], depth: int = 1
     ) -> bool:
         """Check if a provided diryath, dirnames, and filenames set matches the requirements"""
 
@@ -205,16 +205,23 @@ class FileStructurePattern:
 
         if not dryrun:
             destination.mkdir(parents=True, exist_ok=overwrite)
-
+        logger.debug("%s %s", source, destination)
         # Copy all files in this top level that match a required or optional file pattern
         files = (file for file in source.iterdir() if file.is_file())
         for file in files:
-            if any(file.match(pattern) for pattern in self.all_files):
+            logger.debug("Checking file %s against %s", file, self.all_files)
+            logger.debug(
+                "matches: %s", [file.match(pattern) for pattern in self.all_files]
+            )
+            if any(file.match(f"*/{pattern}") for pattern in self.all_files):
+                logger.debug("Matched!")
                 if not dryrun:
-                    shutil.copy2(file, destination / file.name)
-                logger.debug(
-                    "%sCopied %s to %s", dryrun_pad, file, destination / file.name
-                )
+                    logger.debug("Beginning copy...")
+                    target = destination / file.name
+                    stream_copy(file, target)
+                    logger.debug(
+                        "%sCopied %s to %s", dryrun_pad, file, destination / file.name
+                    )
 
         # Recurse into any directories at this level that match a required or optional directory pattern
         paths = (path for path in source.iterdir() if path.is_dir())
@@ -229,3 +236,15 @@ class FileStructurePattern:
                     )
 
         logger.info("%sFinished copying %s to %s", dryrun_pad, source, destination)
+
+
+def stream_copy(source: Path, destination: Path, buffer_size=65536) -> None:
+    """Copy a file from source to destination using a streaming copy"""
+    logger.debug("Starting copy bytes from %s to %s", source, destination)
+    with destination.open("wb") as writer, source.open("rb") as reader:
+        while True:
+            chunk = reader.read(buffer_size)
+            if not chunk:
+                break
+            writer.write(chunk)
+            logger.error("... Copying bytes from %s to %s", source, destination)
