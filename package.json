@@ -9,6 +9,9 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   },
+  "resolutions": {
+    "cross-spawn": "^7.0.6"
+  },
   "scripts": {
     "build": "uv build",
     "check": "yarn run check:format && yarn run check:ruff && yarn run check:mypy && yarn run test",
