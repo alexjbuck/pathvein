@@ -1,7 +1,6 @@
-# Write test for ../pathvein/pattern.py using pytest
-
 import copy
 import json
+from typing import List
 
 from hypothesis import given
 from hypothesis import strategies as st
@@ -9,46 +8,7 @@ from upath import UPath
 
 from pathvein import FileStructurePattern
 
-
-@st.composite
-def pattern_base_strategy(draw, max_name_size: int = 50, max_list_size: int = 50):
-    """
-    A composite strategy for generating FileStructurePattern instances with no children.
-    """
-    name = st.text(min_size=0, max_size=max_name_size)
-    return FileStructurePattern(
-        directory_name=draw(st.one_of(st.none(), name)),
-        files=draw(st.lists(name, max_size=max_list_size)),
-        optional_files=draw(st.lists(name, max_size=max_list_size)),
-    )
-
-
-@st.composite
-def pattern_strategy(
-    draw,
-    max_list_size: int = 50,
-    max_name_size: int = 50,
-    max_branches: int = 2,
-    max_leaves: int = 30,
-):
-    """
-    A composite strategy for generating FileStructurePattern instances
-    """
-    name = st.text(min_size=0, max_size=max_name_size)
-    name_list = st.lists(name, max_size=max_list_size)
-    pattern_strategy = st.recursive(
-        pattern_base_strategy(),
-        lambda children: st.builds(
-            FileStructurePattern,
-            directory_name=name,
-            files=name_list,
-            directories=st.lists(children, min_size=0, max_size=max_branches),
-            optional_files=name_list,
-            optional_directories=st.lists(children, min_size=0, max_size=max_branches),
-        ),
-        max_leaves=max_leaves,
-    )
-    return draw(pattern_strategy)
+from .strategies import pattern_base_strategy, pattern_strategy
 
 
 @given(pattern_strategy())
@@ -130,7 +90,7 @@ def test_add_directory(pattern: FileStructurePattern, addition: FileStructurePat
 
 @given(pattern_strategy(), st.lists(pattern_base_strategy()))
 def test_add_directories(
-    pattern: FileStructurePattern, additions: list[FileStructurePattern]
+    pattern: FileStructurePattern, additions: List[FileStructurePattern]
 ):
     length = len(pattern.directories)
     pattern.add_directories(additions)
@@ -157,7 +117,7 @@ def test_add_file(pattern: FileStructurePattern, addition: str):
 
 
 @given(pattern_strategy(), st.lists(st.text()))
-def test_add_files(pattern: FileStructurePattern, additions: list[str]):
+def test_add_files(pattern: FileStructurePattern, additions: List[str]):
     length = len(pattern.files)
     pattern.add_files(additions)
     assert len(pattern.files) == length + len(additions)

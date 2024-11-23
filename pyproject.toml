@@ -3,8 +3,8 @@ name = "pathvein"
 version = "0.5.6"
 description = "Rich and deep file structure pattern matching."
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = []
+requires-python = ">=3.8"
+dependencies = ["typing-extensions>=4.12.2"]
 
 [project.scripts]
 pathvein = "pathvein.cli:main"
@@ -25,12 +25,12 @@ packages = ["pathvein"]
 [tool.uv]
 dev-dependencies = [
     "mypy>=1.13.0",
-    "pytest-cov>=6.0.0",
     "pytest>=8.3.3",
     "ruff>=0.6.9",
-    "spear-ai-ruff-config>=5.0.0",
-    "hypothesis>=6.119.3",
     "universal-pathlib>=0.2.5",
+    "hypothesis-fspaths>=0.1",
+    "pytest-cov>=5.0.0",
+    "hypothesis>=6.113.0",
 ]
 
 [tool.pytest.ini_options]

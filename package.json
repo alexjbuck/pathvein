@@ -17,6 +17,7 @@
     "check:mypy": "uv run --all-extras mypy pathvein",
     "check:ruff": "uv run --all-extras ruff check .",
     "check:ruff:fix": "uv run --all-extras ruff check --fix .",
+    "fix": "yarn run check:format:fix && yarn run check:ruff:fix",
     "test": "yarn run test:pytest",
     "test:pytest": "uv run --all-extras pytest",
     "publish": "uv publish",
