@@ -40,15 +40,17 @@ def scan(
     # Resolve to real paths to ensure that things like .exist() and .is_dir() work correctly
     source = source.resolve()
 
-    for pattern in patterns:
+    # Consume the iterable into a list so we can reuse it
+    pattern_list = list(patterns)
+
+    for pattern in pattern_list:
         logger.debug("Scanning for paths that match structure: %s", pattern)
 
     matches = set()
 
     for dirpath, dirnames, filenames in walk(source):
-        logger.debug("Path.walk: (%s, %s, %s)", dirpath, dirnames, filenames)
-        # Expclicitly ensure walk results are the correct types
-        for pattern in patterns:
+        logger.debug("Walk: (%s, %s, %s)", dirpath, dirnames, filenames)
+        for pattern in pattern_list:
             if pattern.matches((dirpath, dirnames, filenames)):
                 logger.debug("Matched structure %s in %s", pattern, dirpath)
                 matches.add(ScanResult(dirpath, pattern))
