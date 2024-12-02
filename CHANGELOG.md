@@ -1,5 +1,11 @@
 # pathvein
 
+## 0.7.0
+
+### Minor Changes
+
+- [#21](https://github.com/alexjbuck/pathvein/pull/21) [`d605cdd`](https://github.com/alexjbuck/pathvein/commit/d605cddd09ba2eaf3e749c643e94d7c4ad3ebeee) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Implemented and tested s3 path support
+
 ## 0.6.2
 
 ### Patch Changes
