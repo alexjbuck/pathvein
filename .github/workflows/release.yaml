@@ -12,6 +12,7 @@ jobs:
     environment: pypi
     outputs:
       should-deploy: ${{ steps.changesets.outputs.hasChangesets == 'false' }}
+      version: ${{ steps.version.outputs.version }}
     permissions: write-all
     steps:
       - name: Checkout repository
@@ -55,3 +56,26 @@ jobs:
           commit: Release 🚀
           publish: yarn run publish
           setupGitUser: false
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        if: steps.changesets.outputs.hasChangesets == 'false'
+  
+  create-release:
+    needs: changesets
+    if: needs.changesets.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.changesets.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --generate-notes
