@@ -1,31 +1,23 @@
-from contextlib import contextmanager
 import logging
 from pathlib import Path
 from typing import List
 
-from fsspec.compression import fsspec
 from hypothesis import given
 from hypothesis_fspaths import fspaths
 from upath import UPath
 
-from pathvein.lib import ScanResult, ShuffleInput, ShuffleResult, scan, shuffle
+from pathvein.lib import (
+    ScanResult,
+    ShuffleInput,
+    ShuffleResult,
+    scan,
+    shuffle,
+    shuffle_to,
+    shuffle_with,
+)
 from pathvein.pattern import FileStructurePattern
-
-from .strategies import pattern_strategy
-
-
-@contextmanager
-def isolated_memory_filesystem():
-    fs = fsspec.filesystem("memory")
-    archive_store = fs.store
-    archive_dirs = fs.pseudo_dirs
-    try:
-        fs.store = {}
-        fs.pseudo_dirs = [""]
-        yield fs
-    finally:
-        fs.store = archive_store
-        fs.pseudo_dirs = archive_dirs
+from tests import isolated_memory_filesystem
+from tests.strategies import pattern_strategy
 
 
 @given(fspaths(), fspaths(), pattern_strategy())
@@ -51,14 +43,15 @@ def test_tuples(source: Path, dest: Path, pattern: FileStructurePattern):
     assert shuffle_result.pattern == pattern
 
 
-def test_scan_simple():
+def test_scan_simple(caplog):
     with isolated_memory_filesystem():
         file = UPath("/dir/file.txt", protocol="memory")
         match = file.parent
         file.touch()
         pattern = FileStructurePattern("dir", files=["file.txt"])
         root = UPath("/", protocol="memory")
-        result = scan(root, [pattern])
+        with caplog.at_level(logging.DEBUG):
+            result = scan(root, [pattern])
         assert isinstance(result, set)
         assert all(isinstance(r, ScanResult) for r in result)
         assert len(result) == 1
@@ -85,7 +78,7 @@ def test_scan_local_fs():
     assert result == {ScanResult(match, pattern)}
 
 
-def test_shuffle_simple(caplog):
+def test_shuffle_simple():
     with isolated_memory_filesystem():
         filename = "file.txt"
         dirname = "dir"
@@ -109,9 +102,8 @@ def test_shuffle_simple(caplog):
         assert file_after_copy.exists() is False
         assert dest.exists() is False
 
-        with caplog.at_level(logging.DEBUG):
-            input: ShuffleInput = ShuffleInput(source, dest, pattern)
-            result = shuffle({input})
+        input: ShuffleInput = ShuffleInput(source, dest, pattern)
+        result = shuffle({input})
 
         # Validate the result
         assert isinstance(result, List)
@@ -181,8 +173,76 @@ def test_shuffle_exception_file_exists(caplog):
 
 
 def test_shuffle_with():
-    pass
+    with isolated_memory_filesystem():
+        filename = "file.txt"
+        dirname = "dir"
+        destprefix = "dest"
+        root = UPath("/", protocol="memory")
+        source = root / dirname
+        file = root / dirname / filename
+        dest = root / destprefix / dirname
+        dir_after_copy = root / destprefix / dirname
+        file_after_copy = root / destprefix / dirname / filename
+
+        # Define the search pattern to match the source file/directory
+        pattern = FileStructurePattern("dir", files=["file.txt"])
+
+        # Ensure the source file/directories exist in the memory filesystem
+        source.mkdir()
+        file.write_text("Hello World!")
+
+        # Assert that the file does not yet exist in the destination
+        assert file.exists()
+        assert file_after_copy.exists() is False
+        assert dest.exists() is False
+
+        input: ScanResult = ScanResult(source, pattern)
+        result = shuffle_with({input}, lambda _: dest)
+
+        # Validate the result
+        assert isinstance(result, List)
+        assert all(isinstance(r, ShuffleResult) for r in result)
+        assert len(result) == 1
+        assert result == [ShuffleResult(source, dest, pattern)]
+        assert dir_after_copy.exists()
+        assert dir_after_copy.is_dir()
+        assert file_after_copy.exists()
+        assert file_after_copy.is_file()
 
 
 def test_shuffle_to():
-    pass
+    with isolated_memory_filesystem():
+        filename = "file.txt"
+        dirname = "dir"
+        destprefix = "dest"
+        root = UPath("/", protocol="memory")
+        source = root / dirname
+        file = root / dirname / filename
+        dest = root / destprefix / dirname
+        dir_after_copy = root / destprefix / dirname
+        file_after_copy = root / destprefix / dirname / filename
+
+        # Define the search pattern to match the source file/directory
+        pattern = FileStructurePattern("dir", files=["file.txt"])
+
+        # Ensure the source file/directories exist in the memory filesystem
+        source.mkdir()
+        file.write_text("Hello World!")
+
+        # Assert that the file does not yet exist in the destination
+        assert file.exists()
+        assert file_after_copy.exists() is False
+        assert dest.exists() is False
+
+        input: ScanResult = ScanResult(source, pattern)
+        result = shuffle_to({input}, root / destprefix)
+
+        # Validate the result
+        assert isinstance(result, List)
+        assert all(isinstance(r, ShuffleResult) for r in result)
+        assert len(result) == 1
+        assert result == [ShuffleResult(source, dest, pattern)]
+        assert dir_after_copy.exists()
+        assert dir_after_copy.is_dir()
+        assert file_after_copy.exists()
+        assert file_after_copy.is_file()
