@@ -13,6 +13,16 @@ from ._path_utils import stream_copy, walk
 logger = logging.getLogger(__name__)
 
 
+def none_of(iter: Iterable[bool]) -> bool:
+    # Return True if all are False otherwise return False
+    return all(not value for value in iter)
+
+
+def next_step(path: Path) -> Tuple[Path, List[str], List[str]]:
+    """Get the next tuple from a directory walk iterator."""
+    return next(walk(path))
+
+
 @dataclass
 class FileStructurePattern:
     """
@@ -135,18 +145,17 @@ class FileStructurePattern:
     def matches(
         self: Self, walk_args: Tuple[Path, List[str], List[str]], depth: int = 1
     ) -> bool:
-        """Check if a provided diryath, dirnames, and filenames set matches the requirements"""
+        """Check if a provided dirpath, dirnames, and filenames set matches the requirements"""
 
         # Unpack Path.walk outputs. Taking this as a tuple simplifies the recursion callsite below
         dirpath, dirnames, filenames = walk_args
 
         lpad = "#" * depth
 
-        logger.debug("%s Evaluting match for %s", lpad, dirpath)
-        logger.debug("%s Against %s", lpad, self)
+        logger.debug("%s Evaluting match for %s against %s", lpad, dirpath, self)
 
         # Short circuit check for directory name pattern match
-        if self.directory_name and not dirpath.match(self.directory_name):
+        if self.directory_name and not fnmatch(dirpath.name, self.directory_name):
             logger.debug(
                 "%s x Failed match on directory name: Expected: %s, Found: %s",
                 lpad,
@@ -159,7 +168,7 @@ class FileStructurePattern:
         for pattern in self.files:
             # If all input filenames do not match a pattern, then its a missed pattern, and not a match
             # The failing case is when no files match a pattern, aka all files do not match.
-            if all(not fnmatch(filename, pattern) for filename in filenames):
+            if none_of(fnmatch(filename, pattern) for filename in filenames):
                 logger.debug(
                     "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
                     lpad,
@@ -169,17 +178,21 @@ class FileStructurePattern:
                 )
                 return False
 
+        # NOTE: This could be written as a double nested list comprehension that includes the
+        # self.directories iterations as well, but its rather confusing to read, leaving that
+        # as an outer for-loop is easier to read.
+        #
         # Recurse into required subdirectory branches (if they exist)
-        for branch in self.directories:
-            # The failing case is when no directories match the requirement, aka all directories do not match the branch
-            if all(
-                not branch.matches(next(walk(dirpath / directory)), depth + 1)
+        for branch_pattern in self.directories:
+            # Evaluate if any actual directories from dirnames match the given pattern
+            if none_of(
+                branch_pattern.matches(next_step(dirpath / directory), depth + 1)
                 for directory in dirnames
             ):
                 logger.debug(
                     "%s x Failed on subdirectory match. Required %s, Found: %s, Directory: %s",
                     lpad,
-                    branch,
+                    branch_pattern,
                     dirnames,
                     dirpath,
                 )
@@ -187,10 +200,8 @@ class FileStructurePattern:
 
         # Passing all previous checks implies:
         # 1. The directory_name matches or is not a requirement
-        # 2. The directory_name_pattern matches or is not a requirement
-        # 3. The required files are present
-        # 4. The required file patterns are matched
-        # 5. The required directories are matched (recursively)
+        # 2. The required file patterns are matched
+        # 3. The required directories are matched (recursively)
         # In this case, this directory structure meets the requirements!
         logger.info("%s + Matched: %s on %s!", lpad, dirpath, self)
         return True
@@ -202,7 +213,32 @@ class FileStructurePattern:
         overwrite: bool = False,
         dryrun: bool = False,
     ) -> None:
-        """Copy all files and folders from source that match the file requirements patterns to the destionation path"""
+        """Copy all files and folders from inside source that match the file requirements patterns into the destination path.
+
+        Before:
+        Source:
+        source_dir/
+            file1.txt
+            nested/
+                file2.txt
+
+        Destination:
+        dest_dir/
+
+        After:
+        Source:
+        source_dir/
+            file1.txt
+            nested/
+                file2.txt
+
+        Destination:
+        dest_dir/
+        source_dir/
+            file1.txt
+            nested/
+                file2.txt
+        """
 
         dryrun_pad = "(dryrun) " if dryrun else ""
 
@@ -214,9 +250,10 @@ class FileStructurePattern:
         for file in files:
             logger.debug("Checking file %s against %s", file, self.all_files)
             logger.debug(
-                "matches: %s", [file.match(pattern) for pattern in self.all_files]
+                "matches: %s",
+                [fnmatch(file.name, pattern) for pattern in self.all_files],
             )
-            if any(file.match(f"*/{pattern}") for pattern in self.all_files):
+            if any(fnmatch(file.name, pattern) for pattern in self.all_files):
                 logger.debug("Matched!")
                 if not dryrun:
                     logger.debug("Beginning copy...")
@@ -229,9 +266,9 @@ class FileStructurePattern:
         # Recurse into any directories at this level that match a required or optional directory pattern
         paths = (path for path in source.iterdir() if path.is_dir())
         for path in paths:
-            for branch in self.all_directories:
-                if branch.matches(next(walk(path))):
-                    branch.copy(
+            for branch_pattern in self.all_directories:
+                if branch_pattern.matches(next_step(path)):
+                    branch_pattern.copy(
                         path,
                         destination / path.name,
                         overwrite=overwrite,

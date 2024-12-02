@@ -16,7 +16,7 @@ def stream_copy(source: Path, destination: Path, buffer_size=65536) -> None:
             if not chunk:
                 break
             writer.write(chunk)
-            logger.error("... Copying bytes from %s to %s", source, destination)
+            logger.debug("... Copying bytes from %s to %s", source, destination)
 
 
 def walk(source: Path) -> Generator[Tuple[Path, List[str], List[str]], None, None]:

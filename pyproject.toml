@@ -11,6 +11,10 @@ pathvein = "pathvein.cli:main"
 
 [project.optional-dependencies]
 cli = ["typer>=0.13.1"]
+s3 = [
+    "fsspec[s3]>=2024.10.0",
+    "universal-pathlib>=0.2.5",
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -13,17 +13,34 @@ logger = logging.getLogger(__name__)
 
 
 class ScanResult(NamedTuple):
+    """
+    source: Path
+    pattern: FileStructurePattern
+    """
+
     source: Path
     pattern: FileStructurePattern
 
 
 class ShuffleInput(NamedTuple):
+    """
+    source: Path
+    destination: Path
+    pattern: FileStructurePattern
+    """
+
     source: Path
     destination: Path
     pattern: FileStructurePattern
 
 
 class ShuffleResult(NamedTuple):
+    """
+    source: Path
+    destination: Path
+    pattern: FileStructurePattern
+    """
+
     source: Path
     destination: Path
     pattern: FileStructurePattern
