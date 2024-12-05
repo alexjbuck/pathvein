@@ -1,5 +1,11 @@
 # pathvein
 
+## 0.7.1
+
+### Patch Changes
+
+- [#24](https://github.com/alexjbuck/pathvein/pull/24) [`b08dadb`](https://github.com/alexjbuck/pathvein/commit/b08dadb1df7c050edea9d0846a7991928f0531bc) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Added support for static type checking with `py.typed`
+
 ## 0.7.0
 
 ### Minor Changes
