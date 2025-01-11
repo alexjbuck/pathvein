@@ -163,6 +163,10 @@ class FileStructurePattern:
         for pattern in self.files:
             # If all input filenames do not match a pattern, then its a missed pattern, and not a match
             # The failing case is when no files match a pattern, aka all files do not match.
+            #
+            # NOTE(Performance): fnmatch internally runs a regex compile on the pattern and caches the result.
+            # This means its beneficial to reuse the same pattern multiple times in a row, so it is preferred
+            # to first iterate over the patterns, and then iterate over the filenames instead of the other way around.
             if _none_of(fnmatch(filename, pattern) for filename in filenames):
                 logger.debug(
                     "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
