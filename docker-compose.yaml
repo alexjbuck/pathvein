@@ -1,12 +1,12 @@
 name: pathvein
 services:
   minio:
-    command: server --console-address :9001 /data --address :9000
+    command: server --console-address :19001 /data --address :19000
     container_name: pathvein-minio
     environment:
       MINIO_ROOT_PASSWORD: minioadmin
       MINIO_ROOT_USER: minioadmin
     image: minio/minio:latest
     ports:
-      - 9000:9000
-      - 9001:9001
+      - 19000:19000
+      - 19001:19001

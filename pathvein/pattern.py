@@ -8,19 +8,14 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 from typing_extensions import Self
 
-from ._path_utils import stream_copy, walk
+from ._path_utils import _iterdir, _stream_copy
 
 logger = logging.getLogger(__name__)
 
 
-def none_of(iter: Iterable[bool]) -> bool:
+def _none_of(iter: Iterable[bool]) -> bool:
     # Return True if all are False otherwise return False
     return all(not value for value in iter)
-
-
-def next_step(path: Path) -> Tuple[Path, List[str], List[str]]:
-    """Get the next tuple from a directory walk iterator."""
-    return next(walk(path))
 
 
 @dataclass
@@ -168,7 +163,11 @@ class FileStructurePattern:
         for pattern in self.files:
             # If all input filenames do not match a pattern, then its a missed pattern, and not a match
             # The failing case is when no files match a pattern, aka all files do not match.
-            if none_of(fnmatch(filename, pattern) for filename in filenames):
+            #
+            # NOTE(Performance): fnmatch internally runs a regex compile on the pattern and caches the result.
+            # This means its beneficial to reuse the same pattern multiple times in a row, so it is preferred
+            # to first iterate over the patterns, and then iterate over the filenames instead of the other way around.
+            if _none_of(fnmatch(filename, pattern) for filename in filenames):
                 logger.debug(
                     "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
                     lpad,
@@ -185,8 +184,8 @@ class FileStructurePattern:
         # Recurse into required subdirectory branches (if they exist)
         for branch_pattern in self.directories:
             # Evaluate if any actual directories from dirnames match the given pattern
-            if none_of(
-                branch_pattern.matches(next_step(dirpath / directory), depth + 1)
+            if _none_of(
+                branch_pattern.matches(_iterdir(dirpath / directory), depth + 1)
                 for directory in dirnames
             ):
                 logger.debug(
@@ -258,7 +257,7 @@ class FileStructurePattern:
                 if not dryrun:
                     logger.debug("Beginning copy...")
                     target = destination / file.name
-                    stream_copy(file, target)
+                    _stream_copy(file, target)
                     logger.debug(
                         "%sCopied %s to %s", dryrun_pad, file, destination / file.name
                     )
@@ -267,7 +266,7 @@ class FileStructurePattern:
         paths = (path for path in source.iterdir() if path.is_dir())
         for path in paths:
             for branch_pattern in self.all_directories:
-                if branch_pattern.matches(next_step(path)):
+                if branch_pattern.matches(_iterdir(path)):
                     branch_pattern.copy(
                         path,
                         destination / path.name,
