@@ -1,5 +1,13 @@
 # pathvein
 
+## 0.8.0
+
+### Minor Changes
+
+- [#31](https://github.com/alexjbuck/pathvein/pull/31) [`68fc485`](https://github.com/alexjbuck/pathvein/commit/68fc485cd4643694a33f5b1ab6a4b966a842d9c6) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Added cacheing to the path walk functionality.
+
+  Specifically cached the results of `_iterdir` which powers the core of the path `walk` function.
+
 ## 0.7.1
 
 ### Patch Changes
