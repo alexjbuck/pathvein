@@ -142,3 +142,8 @@ $ pathvein scan source_dir --pattern pattern.config
 pathvein shuffle source_dir dest_dir -p pattern.config -p additional.config
 ```
 
+## Performance Notes
+
+This library makes use of caching to improve performance. While iterating through the search directories, the results of `path.iterdir()` are cached into a thread-safe cache.
+This program behaves in a way that causes multiple calls to `path.iterdir()` for each path in the tree. When this involves network requests, the cached function can be several
+orders of magnitude faster. Even for local file system calls (i.e. `path` is a POSIX path) this can be over 100x faster by caching.
