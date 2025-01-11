@@ -10,7 +10,7 @@ from tests import ephemeral_s3_bucket
 S3_CONFIG = {
     "key": "minioadmin",
     "secret": "minioadmin",
-    "endpoint_url": "http://localhost:9000",
+    "endpoint_url": "http://localhost:19000",
 }
 
 
