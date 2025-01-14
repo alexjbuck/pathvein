@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 
 from pathvein.pattern import FileStructurePattern
 
-from .lib import scan, shuffle_to
+from pathvein.lib import scan, shuffle_to
 
 context_settings = {
     "help_option_names": ["-h", "--help"],
