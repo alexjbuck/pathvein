@@ -8,7 +8,7 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 from typing_extensions import Self
 
-from ._path_utils import _iterdir, _stream_copy
+from ._path_utils import _iterdir, stream_copy
 
 logger = logging.getLogger(__name__)
 
@@ -257,7 +257,7 @@ class FileStructurePattern:
                 if not dryrun:
                     logger.debug("Beginning copy...")
                     target = destination / file.name
-                    _stream_copy(file, target)
+                    stream_copy(file, target)
                     logger.debug(
                         "%sCopied %s to %s", dryrun_pad, file, destination / file.name
                     )

@@ -7,7 +7,7 @@ from typing import Generator, List, Tuple
 logger = logging.getLogger(__name__)
 
 
-def _stream_copy(source: Path, destination: Path, buffer_size=65536) -> None:
+def stream_copy(source: Path, destination: Path, buffer_size=65536) -> None:
     """Copy a file from source to destination using a streaming copy"""
     logger.debug("Starting copy bytes from %s to %s", source, destination)
     with destination.open("wb") as writer, source.open("rb") as reader:
@@ -19,7 +19,7 @@ def _stream_copy(source: Path, destination: Path, buffer_size=65536) -> None:
             logger.debug("... Copying bytes from %s to %s", source, destination)
 
 
-def _walk(source: Path) -> Generator[Tuple[Path, List[str], List[str]], None, None]:
+def walk(source: Path) -> Generator[Tuple[Path, List[str], List[str]], None, None]:
     """
     Recursively walk a directory path and return a list of directories and filesystem
 
@@ -39,7 +39,11 @@ def _walk(source: Path) -> Generator[Tuple[Path, List[str], List[str]], None, No
         dir_stack.append(source)
         while dir_stack:
             path = dir_stack.pop()
-            path, dirnames, filenames = _iterdir(path)
+            try:
+                path, dirnames, filenames = _iterdir(path)
+            except PermissionError:
+                logger.warning("Permission denied for %s", path)
+                continue
             yield path, dirnames, filenames
             # Breadth-first traversal
             dirs = [path / dirname for dirname in dirnames]

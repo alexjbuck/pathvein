@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import Callable, Iterable, List, NamedTuple, Set
 
-from ._path_utils import _walk
+from ._path_utils import walk
 from .pattern import FileStructurePattern
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ def scan(
 
     matches = set()
 
-    for dirpath, dirnames, filenames in _walk(source):
+    for dirpath, dirnames, filenames in walk(source):
         logger.debug("Walk: (%s, %s, %s)", dirpath, dirnames, filenames)
         for pattern in pattern_list:
             if pattern.matches((dirpath, dirnames, filenames)):
