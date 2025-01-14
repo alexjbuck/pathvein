@@ -1,5 +1,11 @@
 # pathvein
 
+## 0.8.1
+
+### Patch Changes
+
+- [#34](https://github.com/alexjbuck/pathvein/pull/34) [`e466a9d`](https://github.com/alexjbuck/pathvein/commit/e466a9d3ce3aa88dab2974abe06b35bdd5ee53bc) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Changed private path utils to public
+
 ## 0.8.0
 
 ### Minor Changes
