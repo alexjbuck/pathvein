@@ -46,6 +46,19 @@ class ShuffleResult(NamedTuple):
     pattern: FileStructurePattern
 
 
+def assess(
+    file: Path,
+    patterns: Iterable[FileStructurePattern],
+) -> Set[ScanResult]:
+    candidates = set()
+    for pattern in patterns:
+        roots = pattern.roots_from(file)
+        if len(roots) > 0:
+            for root in roots:
+                candidates.add(ScanResult(root, pattern))
+    return candidates
+
+
 def scan(
     source: Path,
     patterns: Iterable[FileStructurePattern],

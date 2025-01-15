@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Set, Tuple
 
 from typing_extensions import Self
 
@@ -26,7 +26,7 @@ class FileStructurePattern:
     This class also supports a builder pattern as any intermediate state is also valid.
     """
 
-    directory_name: Optional[str] = None
+    directory_name: str = "*"
     files: List[str] = field(default_factory=list)
     directories: List[Self] = field(default_factory=list)
     optional_files: List[str] = field(default_factory=list)
@@ -125,7 +125,7 @@ class FileStructurePattern:
             self.add_file(file, is_optional)
         return self
 
-    def set_directory_name(self: Self, name: Optional[str]) -> Self:
+    def set_directory_name(self: Self, name: str) -> Self:
         self.directory_name = name
         return self
 
@@ -136,6 +136,27 @@ class FileStructurePattern:
     @property
     def all_directories(self: Self) -> List[Self]:
         return list(set(self.directories) | set(self.optional_directories))
+
+    def roots_from(self: Self, file: Path, parent: Optional[Path] = None) -> Set[Path]:
+        candidates = set()
+        prefix = "**/"
+        if parent is None:
+            parent = Path()
+        for file_pattern in self.all_files:
+            pattern = prefix + (parent / file_pattern).as_posix()
+            # UPath.match doesn't seem to work reliably, cast to a Path type explicitly
+            # and use its glob-style pattern matching.
+            if Path(file).match(pattern):
+                # patterns are ** / <directories> / file
+                # so the directory depth is length of parts - 2
+                # Minus 1 for the ** and minus 1 for the file
+                depth = len(Path(pattern).parts) - 2
+                candidates.add(file.parents[depth])
+
+        for directory in self.all_directories:
+            candidates |= directory.roots_from(file, parent / directory.directory_name)
+
+        return candidates
 
     def matches(
         self: Self, walk_args: Tuple[Path, List[str], List[str]], depth: int = 1
