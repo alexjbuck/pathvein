@@ -40,7 +40,7 @@ def walk(source: Path) -> Generator[Tuple[Path, List[str], List[str]], None, Non
         while dir_stack:
             path = dir_stack.pop()
             try:
-                path, dirnames, filenames = _iterdir(path)
+                path, dirnames, filenames = iterdir(path)
             except PermissionError:
                 logger.warning("Permission denied for %s", path)
                 continue
@@ -52,7 +52,7 @@ def walk(source: Path) -> Generator[Tuple[Path, List[str], List[str]], None, Non
 
 
 @lru_cache(maxsize=None)
-def _iterdir(path: Path) -> Tuple[Path, List[str], List[str]]:
+def iterdir(path: Path) -> Tuple[Path, List[str], List[str]]:
     """Return a list of all files and directories in a directory path"""
     contents = list(path.iterdir())
     filenames = [content.name for content in contents if content.is_file()]

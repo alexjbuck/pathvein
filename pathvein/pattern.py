@@ -8,7 +8,7 @@ from typing import Any, Iterable, List, Optional, Set, Tuple
 
 from typing_extensions import Self
 
-from ._path_utils import _iterdir, stream_copy
+from ._path_utils import iterdir, stream_copy
 
 logger = logging.getLogger(__name__)
 
@@ -137,24 +137,49 @@ class FileStructurePattern:
     def all_directories(self: Self) -> List[Self]:
         return list(set(self.directories) | set(self.optional_directories))
 
-    def roots_from(self: Self, file: Path, parent: Optional[Path] = None) -> Set[Path]:
+    def parents_of(self: Self, file: Path, parent: Path = Path()) -> Set[Path]:
+        """Find all possible parent directories that could contain the given file based on the pattern.
+
+        This method will complete a recursive search through all the required and
+        optional files in the pattern through all directory tree branches.
+
+        Each level constructs the pattern for the optional and required files
+        to include the parents of the current directory pattern and compares that
+        to the full path of the provided file. If the pattern matches then we
+        compute the root directory of the pattern that would contain that file by
+        evaluating the depth of the pattern and backing off that many layers from
+        the input file. That path gets added to a set of possible parent directories.
+
+        Its possible to have multiple possible parent directories at this point of
+        evaluation. As a trivial example imagine a pattern with optional files at
+        **/a/b/file.txt and **/b/file.txt. When provided an input file of:
+
+        /input/a/b/file.txt it will match on both patterns. The two possible parent
+        or root directories are /input and /input/a. Without evaluating the full
+        pattern from that root directory we cannot yet be sure if either is actually
+        a valid parent/root directory. We only have the context of this single input
+        file. From that alone, either directory _could_ be the root with this pattern.
+        """
         candidates = set()
         prefix = "**/"
         if parent is None:
             parent = Path()
         for file_pattern in self.all_files:
-            pattern = prefix + (parent / file_pattern).as_posix()
+            pattern = prefix + str(parent / file_pattern)
             # UPath.match doesn't seem to work reliably, cast to a Path type explicitly
             # and use its glob-style pattern matching.
+            # This turns s3://bucket/prefix into /bucket/prefix so any glob pattern as
+            # the only difference is the absence of the s3:/ protocol prefix.
             if Path(file).match(pattern):
                 # patterns are ** / <directories> / file
                 # so the directory depth is length of parts - 2
                 # Minus 1 for the ** and minus 1 for the file
+                # The directory depth is the number of "parents" that we need to go up.
                 depth = len(Path(pattern).parts) - 2
                 candidates.add(file.parents[depth])
 
         for directory in self.all_directories:
-            candidates |= directory.roots_from(file, parent / directory.directory_name)
+            candidates |= directory.parents_of(file, parent / directory.directory_name)
 
         return candidates
 
@@ -206,7 +231,7 @@ class FileStructurePattern:
         for branch_pattern in self.directories:
             # Evaluate if any actual directories from dirnames match the given pattern
             if _none_of(
-                branch_pattern.matches(_iterdir(dirpath / directory), depth + 1)
+                branch_pattern.matches(iterdir(dirpath / directory), depth + 1)
                 for directory in dirnames
             ):
                 logger.debug(
@@ -287,7 +312,7 @@ class FileStructurePattern:
         paths = (path for path in source.iterdir() if path.is_dir())
         for path in paths:
             for branch_pattern in self.all_directories:
-                if branch_pattern.matches(_iterdir(path)):
+                if branch_pattern.matches(iterdir(path)):
                     branch_pattern.copy(
                         path,
                         destination / path.name,

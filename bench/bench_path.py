@@ -24,12 +24,12 @@ def cache_bench(f, n, *args, **kwargs):
 
 if __name__ == "__main__":
     n = 100000
-    from pathvein._path_utils import _iterdir
+    from pathvein._path_utils import iterdir
     from pathlib import Path
 
     p = Path(".").resolve()
 
     print("No cache")
-    no_cache_bench(_iterdir, n, p)
+    no_cache_bench(iterdir, n, p)
     print("Cache")
-    cache_bench(_iterdir, n, p)
+    cache_bench(iterdir, n, p)

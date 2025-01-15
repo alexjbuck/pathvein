@@ -1,8 +1,8 @@
 import logging
 from pathlib import Path
-from typing import Callable, Iterable, List, NamedTuple, Set
+from typing import Callable, Generator, Iterable, List, NamedTuple, Set
 
-from ._path_utils import walk
+from ._path_utils import iterdir, walk
 from .pattern import FileStructurePattern
 
 logger = logging.getLogger(__name__)
@@ -49,14 +49,14 @@ class ShuffleResult(NamedTuple):
 def assess(
     file: Path,
     patterns: Iterable[FileStructurePattern],
-) -> Set[ScanResult]:
-    candidates = set()
+) -> Generator[ScanResult, None, None]:
+    """Assess a single file path for a pattern that it could fit into and check if that pattern is valid given the input file"""
     for pattern in patterns:
-        roots = pattern.roots_from(file)
+        roots = pattern.parents_of(file)
         if len(roots) > 0:
             for root in roots:
-                candidates.add(ScanResult(root, pattern))
-    return candidates
+                if pattern.matches(iterdir(root)):
+                    yield ScanResult(root, pattern)
 
 
 def scan(
