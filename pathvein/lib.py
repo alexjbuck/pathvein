@@ -91,7 +91,7 @@ def scan(
 
 
 def shuffle(
-    shuffle_def: Set[ShuffleInput],
+    shuffle_def: Iterable[ShuffleInput],
     overwrite: bool = False,
     dryrun: bool = False,
 ) -> List[ShuffleResult]:
@@ -120,7 +120,7 @@ def shuffle(
 
 
 def shuffle_to(
-    matches: Set[ScanResult],
+    matches: Iterable[ScanResult],
     destination: Path,
     overwrite: bool = False,
     dryrun: bool = False,
@@ -131,19 +131,17 @@ def shuffle_to(
     Each match will be copied into a flat structure at `destination / match.source.name`
     """
 
-    shuffle_def = set(
-        map(
-            lambda match: ShuffleInput(
-                match.source, destination / match.source.name, match.pattern
-            ),
-            matches,
-        )
+    shuffle_def = map(
+        lambda match: ShuffleInput(
+            match.source, destination / match.source.name, match.pattern
+        ),
+        matches,
     )
     return shuffle(shuffle_def, overwrite=overwrite, dryrun=dryrun)
 
 
 def shuffle_with(
-    matches: Set[ScanResult],
+    matches: Iterable[ScanResult],
     destination_fn: Callable[[ScanResult], Path],
     overwrite: bool = False,
     dryrun: bool = False,
@@ -155,12 +153,10 @@ def shuffle_with(
     expressive control over the destination of each match.
     """
 
-    shuffle_def = set(
-        map(
-            lambda scan_result: ShuffleInput(
-                scan_result.source, destination_fn(scan_result), scan_result.pattern
-            ),
-            matches,
-        )
+    shuffle_def = map(
+        lambda scan_result: ShuffleInput(
+            scan_result.source, destination_fn(scan_result), scan_result.pattern
+        ),
+        matches,
     )
     return shuffle(shuffle_def, overwrite=overwrite, dryrun=dryrun)
