@@ -7,16 +7,24 @@ from typing import Generator, List, Tuple
 logger = logging.getLogger(__name__)
 
 
-def stream_copy(source: Path, destination: Path, buffer_size=65536) -> None:
+def stream_copy(source: Path, destination: Path, chunk_size=256 * 1024) -> None:
     """Copy a file from source to destination using a streaming copy"""
-    logger.debug("Starting copy bytes from %s to %s", source, destination)
+    logger.debug(
+        "Stream copy initiated", extra={"file": source, "destination": destination}
+    )
     with destination.open("wb") as writer, source.open("rb") as reader:
-        while True:
-            chunk = reader.read(buffer_size)
-            if not chunk:
-                break
-            writer.write(chunk)
-            logger.debug("... Copying bytes from %s to %s", source, destination)
+        # Localize variable access to minimize overhead.
+        read = reader.read
+        write = writer.write
+        while chunk := read(chunk_size):
+            write(chunk)
+    logger.debug(
+        "Copied file",
+        extra={
+            "file": source,
+            "destination": destination,
+        },
+    )
 
 
 def walk(source: Path) -> Generator[Tuple[Path, List[str], List[str]], None, None]:

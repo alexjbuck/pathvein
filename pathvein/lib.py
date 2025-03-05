@@ -51,11 +51,15 @@ def assess(
     patterns: Iterable[FileStructurePattern],
 ) -> Generator[ScanResult, None, None]:
     """Assess a single file path for a pattern that it could fit into and check if that pattern is valid given the input file"""
+    logger.debug("Assessing %s for patterns %s", file, patterns)
     for pattern in patterns:
+        logger.debug("Assessing %s for pattern %s", file, pattern)
         roots = pattern.parents_of(file)
+        logger.debug("Candidate root directories found: %s", roots)
         if len(roots) > 0:
             for root in roots:
                 if pattern.matches(iterdir(root)):
+                    logger.debug("Yielding root %s", root)
                     yield ScanResult(root, pattern)
 
 
