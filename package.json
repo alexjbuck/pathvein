@@ -11,7 +11,8 @@
     "typescript": "^5.8.2"
   },
   "resolutions": {
-    "cross-spawn": "^7.0.6"
+    "cross-spawn": ">=7.0.6",
+    "esbuild": ">0.24.2"
   },
   "scripts": {
     "build": "uv build",
