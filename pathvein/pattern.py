@@ -1,14 +1,16 @@
 import json
 import logging
+from time import time
 from copy import deepcopy
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Set, Tuple
+from concurrent.futures import ThreadPoolExecutor, Future, wait
 
 from typing_extensions import Self
 
-from ._path_utils import _iterdir, stream_copy
+from ._path_utils import iterdir, stream_copy
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ class FileStructurePattern:
     This class also supports a builder pattern as any intermediate state is also valid.
     """
 
-    directory_name: Optional[str] = None
+    directory_name: str = "*"
     files: List[str] = field(default_factory=list)
     directories: List[Self] = field(default_factory=list)
     optional_files: List[str] = field(default_factory=list)
@@ -125,7 +127,7 @@ class FileStructurePattern:
             self.add_file(file, is_optional)
         return self
 
-    def set_directory_name(self: Self, name: Optional[str]) -> Self:
+    def set_directory_name(self: Self, name: str) -> Self:
         self.directory_name = name
         return self
 
@@ -137,6 +139,50 @@ class FileStructurePattern:
     def all_directories(self: Self) -> List[Self]:
         return list(set(self.directories) | set(self.optional_directories))
 
+    def parents_of(self: Self, file: Path, parent: Path = Path()) -> Set[Path]:
+        """Find all possible parent directories that could contain the given file based on the pattern.
+
+        This method will complete a recursive search through all the required and
+        optional files in the pattern through all directory tree branches.
+
+        Each level constructs the pattern for the optional and required files
+        to include the parents of the current directory pattern and compares that
+        to the full path of the provided file. If the pattern matches then we
+        compute the root directory of the pattern that would contain that file by
+        evaluating the depth of the pattern and backing off that many layers from
+        the input file. That path gets added to a set of possible parent directories.
+
+        Its possible to have multiple possible parent directories at this point of
+        evaluation. As a trivial example imagine a pattern with optional files at
+        **/a/b/file.txt and **/b/file.txt. When provided an input file of:
+
+        /input/a/b/file.txt it will match on both patterns. The two possible parent
+        or root directories are /input and /input/a. Without evaluating the full
+        pattern from that root directory we cannot yet be sure if either is actually
+        a valid parent/root directory. We only have the context of this single input
+        file. From that alone, either directory _could_ be the root with this pattern.
+        """
+        candidates = set()
+        prefix = "**/"
+        for file_pattern in self.all_files:
+            pattern = prefix + str(parent / file_pattern)
+            # UPath.match doesn't seem to work reliably, cast to a Path type explicitly
+            # and use its glob-style pattern matching.
+            # This turns s3://bucket/prefix into /bucket/prefix so any glob pattern as
+            # the only difference is the absence of the s3:/ protocol prefix.
+            if Path(file).match(pattern):
+                # patterns are ** / <directories> / file
+                # so the directory depth is length of parts - 2
+                # Minus 1 for the ** and minus 1 for the file
+                # The directory depth is the number of "parents" that we need to go up.
+                depth = len(Path(pattern).parts) - 2
+                candidates.add(file.parents[depth])
+
+        for directory in self.all_directories:
+            candidates |= directory.parents_of(file, parent / directory.directory_name)
+
+        return candidates
+
     def matches(
         self: Self, walk_args: Tuple[Path, List[str], List[str]], depth: int = 1
     ) -> bool:
@@ -147,7 +193,7 @@ class FileStructurePattern:
 
         lpad = "#" * depth
 
-        logger.debug("%s Evaluting match for %s against %s", lpad, dirpath, self)
+        logger.debug("%s Evaluating match for %s against %s", lpad, dirpath, self)
 
         # Short circuit check for directory name pattern match
         if self.directory_name and not fnmatch(dirpath.name, self.directory_name):
@@ -185,7 +231,7 @@ class FileStructurePattern:
         for branch_pattern in self.directories:
             # Evaluate if any actual directories from dirnames match the given pattern
             if _none_of(
-                branch_pattern.matches(_iterdir(dirpath / directory), depth + 1)
+                branch_pattern.matches(iterdir(dirpath / directory), depth + 1)
                 for directory in dirnames
             ):
                 logger.debug(
@@ -238,35 +284,38 @@ class FileStructurePattern:
             nested/
                 file2.txt
         """
+        start_time = time()
 
         dryrun_pad = "(dryrun) " if dryrun else ""
 
         if not dryrun:
             destination.mkdir(parents=True, exist_ok=overwrite)
-        logger.debug("%s %s", source, destination)
         # Copy all files in this top level that match a required or optional file pattern
-        files = (file for file in source.iterdir() if file.is_file())
+        _, directories, files = iterdir(source)
         for file in files:
-            logger.debug("Checking file %s against %s", file, self.all_files)
+            path = source / file
             logger.debug(
-                "matches: %s",
-                [fnmatch(file.name, pattern) for pattern in self.all_files],
+                "Checking file against patterns",
+                extra={"file": file, "pattern": self.all_files},
             )
-            if any(fnmatch(file.name, pattern) for pattern in self.all_files):
-                logger.debug("Matched!")
+            if any(fnmatch(path.name, pattern) for pattern in self.all_files):
+                logger.debug("Found match")
                 if not dryrun:
-                    logger.debug("Beginning copy...")
-                    target = destination / file.name
-                    stream_copy(file, target)
+                    logger.debug("Beginning copy")
+                    target = destination / path.name
+                    stream_copy(path, target)
                     logger.debug(
-                        "%sCopied %s to %s", dryrun_pad, file, destination / file.name
+                        "Copied file",
+                        extra={
+                            "file": path.as_posix(),
+                            "destination": destination / path.name,
+                        },
                     )
-
         # Recurse into any directories at this level that match a required or optional directory pattern
-        paths = (path for path in source.iterdir() if path.is_dir())
-        for path in paths:
+        for directory in directories:
+            path = source / directory
             for branch_pattern in self.all_directories:
-                if branch_pattern.matches(_iterdir(path)):
+                if branch_pattern.matches(iterdir(path)):
                     branch_pattern.copy(
                         path,
                         destination / path.name,
@@ -274,4 +323,113 @@ class FileStructurePattern:
                         dryrun=dryrun,
                     )
 
-        logger.info("%sFinished copying %s to %s", dryrun_pad, source, destination)
+        logger.info(
+            "%s Directory copied",
+            dryrun_pad,
+            extra={
+                "source": source,
+                "destination": destination,
+                "duration": time() - start_time,
+            },
+        )
+
+    def threaded_copy(
+        self: Self,
+        source: Path,
+        destination: Path,
+        overwrite: bool = False,
+        dryrun: bool = False,
+        max_workers: int = 4,
+    ) -> None:
+        """Copy all files and folders from inside source that match the file requirements patterns into the destination path.
+
+        Before:
+        Source:
+        source_dir/
+            file1.txt
+            nested/
+                file2.txt
+
+        Destination:
+        dest_dir/
+
+        After:
+        Source:
+        source_dir/
+            file1.txt
+            nested/
+                file2.txt
+
+        Destination:
+        dest_dir/
+        source_dir/
+            file1.txt
+            nested/
+                file2.txt
+        """
+        start_time = time()
+
+        futures: Set[Future] = set()
+        with ThreadPoolExecutor(
+            max_workers=max_workers
+        ) as executor:  # Adjust based on your needs
+
+            def recursive_scan(src: Path, dest: Path, pattern: Self = self):
+                if not dryrun:
+                    dest.mkdir(parents=True, exist_ok=overwrite)
+                # Copy all files in this top level that match a required or optional file pattern
+                _, directories, files = iterdir(src)
+                logger.debug(
+                    "Beginning copy operation",
+                    extra={
+                        "source": src,
+                        "directories": directories,
+                        "files": files,
+                        "pattern": pattern,
+                    },
+                )
+                for file in files:
+                    path = src / file
+                    logger.debug(
+                        "Checking file against patterns",
+                        extra={"file": path.name, "pattern": pattern.all_files},
+                    )
+                    if any(
+                        fnmatch(path.name, file_pattern)
+                        for file_pattern in pattern.all_files
+                    ):
+                        logger.debug("Found match")
+                        if not dryrun:
+                            target = dest / path.name
+                            logger.debug(
+                                "Submitting copy task",
+                                extra={"source": path, "destination": target},
+                            )
+                            future = executor.submit(stream_copy, path, target)
+                            futures.add(future)
+                # Recurse into any directories at this level that match a required or optional directory pattern
+                for directory in directories:
+                    path = src / directory
+                    for branch_pattern in self.all_directories:
+                        if branch_pattern.matches(iterdir(path)):
+                            recursive_scan(path, dest / path.name, branch_pattern)
+
+            recursive_scan(source, destination)
+
+            logger.debug("Waiting for futures", extra={"count": len(futures)})
+            done, _ = wait(futures)
+            for future in done:
+                try:
+                    future.result()
+                except Exception as e:
+                    logger.error("Copy operation failed", exc_info=e)
+
+        logger.info(
+            "%s Directory copied",
+            "(dryrun) " if dryrun else "",
+            extra={
+                "source": source,
+                "destination": destination,
+                "duration": time() - start_time,
+            },
+        )

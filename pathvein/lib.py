@@ -1,8 +1,8 @@
 import logging
 from pathlib import Path
-from typing import Callable, Iterable, List, NamedTuple, Set
+from typing import Callable, Generator, Iterable, List, NamedTuple, Set
 
-from ._path_utils import walk
+from ._path_utils import iterdir, walk
 from .pattern import FileStructurePattern
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,23 @@ class ShuffleResult(NamedTuple):
     pattern: FileStructurePattern
 
 
+def assess(
+    file: Path,
+    patterns: Iterable[FileStructurePattern],
+) -> Generator[ScanResult, None, None]:
+    """Assess a single file path for a pattern that it could fit into and check if that pattern is valid given the input file"""
+    logger.debug("Assessing %s for patterns %s", file, patterns)
+    for pattern in patterns:
+        logger.debug("Assessing %s for pattern %s", file, pattern)
+        roots = pattern.parents_of(file)
+        logger.debug("Candidate root directories found: %s", roots)
+        if len(roots) > 0:
+            for root in roots:
+                if pattern.matches(iterdir(root)):
+                    logger.debug("Yielding root %s", root)
+                    yield ScanResult(root, pattern)
+
+
 def scan(
     source: Path,
     patterns: Iterable[FileStructurePattern],
@@ -78,7 +95,7 @@ def scan(
 
 
 def shuffle(
-    shuffle_def: Set[ShuffleInput],
+    shuffle_def: Iterable[ShuffleInput],
     overwrite: bool = False,
     dryrun: bool = False,
 ) -> List[ShuffleResult]:
@@ -107,7 +124,7 @@ def shuffle(
 
 
 def shuffle_to(
-    matches: Set[ScanResult],
+    matches: Iterable[ScanResult],
     destination: Path,
     overwrite: bool = False,
     dryrun: bool = False,
@@ -118,19 +135,17 @@ def shuffle_to(
     Each match will be copied into a flat structure at `destination / match.source.name`
     """
 
-    shuffle_def = set(
-        map(
-            lambda match: ShuffleInput(
-                match.source, destination / match.source.name, match.pattern
-            ),
-            matches,
-        )
+    shuffle_def = map(
+        lambda match: ShuffleInput(
+            match.source, destination / match.source.name, match.pattern
+        ),
+        matches,
     )
     return shuffle(shuffle_def, overwrite=overwrite, dryrun=dryrun)
 
 
 def shuffle_with(
-    matches: Set[ScanResult],
+    matches: Iterable[ScanResult],
     destination_fn: Callable[[ScanResult], Path],
     overwrite: bool = False,
     dryrun: bool = False,
@@ -142,12 +157,10 @@ def shuffle_with(
     expressive control over the destination of each match.
     """
 
-    shuffle_def = set(
-        map(
-            lambda scan_result: ShuffleInput(
-                scan_result.source, destination_fn(scan_result), scan_result.pattern
-            ),
-            matches,
-        )
+    shuffle_def = map(
+        lambda scan_result: ShuffleInput(
+            scan_result.source, destination_fn(scan_result), scan_result.pattern
+        ),
+        matches,
     )
     return shuffle(shuffle_def, overwrite=overwrite, dryrun=dryrun)

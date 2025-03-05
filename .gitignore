@@ -9,3 +9,4 @@ __pycache__
 /.pnp.*
 node_modules
 .venv
+.DS_Store
