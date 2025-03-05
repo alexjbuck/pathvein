@@ -1,5 +1,17 @@
 # pathvein
 
+## 0.9.0
+
+### Minor Changes
+
+- [#43](https://github.com/alexjbuck/pathvein/pull/43) [`fbabb50`](https://github.com/alexjbuck/pathvein/commit/fbabb501f48f258512c0084b013e1c0944893f20) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Add a method to find the possible mission root directories of a pattern-file set
+
+- [#43](https://github.com/alexjbuck/pathvein/pull/43) [`fbabb50`](https://github.com/alexjbuck/pathvein/commit/fbabb501f48f258512c0084b013e1c0944893f20) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Added threaded copy operations to concurrently process files
+
+### Patch Changes
+
+- [#34](https://github.com/alexjbuck/pathvein/pull/34) [`e466a9d`](https://github.com/alexjbuck/pathvein/commit/e466a9d3ce3aa88dab2974abe06b35bdd5ee53bc) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Changed private path utils to public
+
 ## 0.8.0
 
 ### Minor Changes
