@@ -1,0 +1,77 @@
+---
+description: This is the overview of the entire repository. This describes the tech stack, the repository organization, the general dev workflow, and collaboration guidelines.
+type: agent_requested
+---
+# Project Overview: Pathvein, rich and deep file structure pattern matching
+
+## Project Structure
+
+This is a `uv` managed python library for completing file-structure based pattern matching. The source code is in the `src` folder and tests are in the `tests` folder.
+
+## Technology Stack
+
+- Python with maximal type hints. Guaranteed compatibility with Python 3.8.
+- `uv` for python package and environment management.
+- `ruff` for python linting and formatting.
+- `mypy` for python static type checking.
+- `pytest` for python test orchestration.
+- `hypothesis` for python property testing.
+- `yarn` for package scripts and node package management.
+- `changeset` (yarn module) for changeset management.
+- Docker (compose) for initilizing integration test resources 
+
+## Repository Organization
+
+```
+.
+├── src/ 
+│   └── pathvein/ .         # Main package
+│       ├── __init__.py
+│       ├── py.typed
+│       └── ...
+├── tests/                  # Unit tests
+│   ├── __init__.py
+│   └── ...
+├── integration_tests/      # Integration tests
+│   ├── __init__.py
+│   └── ...
+├── bench/                  # Benchmarking code
+│   ├── __init__.py
+│   └── ...
+├── .changeset/
+│   └── config.json
+├── .cursor/
+│   └── rules
+├── .github/                
+│   └── workflows/
+│       └── *.yaml          # Github actions for CI/CD
+├── pyproject.toml
+├── uv.lock
+├── package.json
+├── yarn.lock
+├── sync-versions.ts
+├── docker-compose.yaml
+├── CHANGELOG.md
+├── README.md
+├── .gitignore
+├── .node-version
+├── .python-version
+└── .yarnrc.yml
+```
+
+## Development Workflow
+
+1. Develop new python code.
+2. Write tests for new code.
+3. Run tests locally.
+4. Commit changes if tests pass.
+5. CI/CD pipelines run tests and manage deployments.
+
+
+## Collaboration Guidelines
+
+- Use descriptive branch names
+- Create focused PRs with clear descriptions
+- Follow the established code style
+- Update documentation as needed
+
