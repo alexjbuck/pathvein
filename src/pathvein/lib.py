@@ -1,3 +1,12 @@
+"""
+Core library functionality for Pathvein.
+
+This module provides the main functionality for scanning directories, assessing file patterns,
+and shuffling (copying) files based on pattern matches. It includes the core data structures
+(ScanResult, ShuffleInput, ShuffleResult) and functions (scan, assess, shuffle) that power
+the pattern matching and file organization capabilities.
+"""
+
 import logging
 from pathlib import Path
 from typing import Callable, Generator, Iterable, List, NamedTuple, Set

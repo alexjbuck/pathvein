@@ -1,3 +1,11 @@
+"""
+Path utilities for Pathvein.
+
+This module provides low-level path operations including streaming file copy,
+directory walking, and cached directory listing. These utilities are designed
+to work with both standard pathlib.Path and third-party path-like objects.
+"""
+
 import logging
 import os
 from functools import lru_cache
