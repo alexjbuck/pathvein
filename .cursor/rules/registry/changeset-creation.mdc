@@ -1,0 +1,87 @@
+---
+description: Guidelines for creating changesets properly without bypassing the UI
+type: agent_requested
+---
+# Proper Changeset Creation
+
+## Overview
+When working with changesets in a repository, it's important to handle them properly to support both monolithic and monorepo scenarios. This rule provides guidance on creating changesets correctly.
+
+## Direct Changeset Creation
+Instead of bypassing the interactive UI with commands like `yes | yarn changeset`, create changeset files directly in the `.changeset` directory with the correct format:
+
+```markdown
+---
+"package-name": patch|minor|major
+---
+
+Description of changes
+- Bullet points detailing specific changes
+```
+
+### Monorepo Example
+For monorepos with multiple packages, include all affected packages in the YAML frontmatter:
+
+```markdown
+---
+"package-a": patch
+"package-b": minor
+"shared-lib": major
+---
+
+Description of changes affecting multiple packages
+- Change affecting package-a
+- Breaking change in shared-lib
+- New feature in package-b
+```
+
+## File Naming Convention
+- Use the format: `descriptive-name.md`
+- Names should be kebab-case
+- Example: `add-authentication-feature.md`
+
+## Change Types
+- `patch`: Bug fixes and minor changes
+- `minor`: New features, non-breaking changes
+- `major`: Breaking changes
+
+## Best Practices
+1. Create one changeset per logical change
+2. Include all affected packages in a single changeset
+3. Write clear, descriptive summaries
+4. Use bullet points for specific changes
+5. Never bypass the UI in ways that could miss package dependencies
+
+## Examples
+
+### ✅ Correct: Direct Creation
+```markdown
+---
+"ui-lib": minor
+"api-client": patch
+---
+
+Add new button component
+- Implement ButtonGroup component in ui-lib
+- Update api-client to use new button types
+```
+
+### ❌ Incorrect: UI Bypass
+```bash
+# Don't do this
+yes | yarn changeset  # Bypasses proper package selection
+```
+
+### ✅ Correct: Multiple Changes
+```markdown
+---
+"web-app": minor
+"shared-types": patch
+"api-server": patch
+---
+
+Implement user authentication
+- Add login/logout flows to web-app
+- Update shared types for user session
+- Fix API validation for auth tokens
+```
