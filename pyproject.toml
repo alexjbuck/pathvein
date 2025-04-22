@@ -4,17 +4,14 @@ version = "0.9.0"
 description = "Rich and deep file structure pattern matching."
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = [
-    "pydantic>=2.10.6",
-    "typing-extensions>=4.12.2",
-]
+dependencies = ["pydantic>=2.10.6", "typing-extensions>=4.12.2"]
 
 [project.scripts]
 pathvein = "pathvein.cli:main"
 
 [project.optional-dependencies]
 cli = ["typer>=0.13.1"]
-s3 = ["fsspec[s3]>=2024.10.0", "universal-pathlib>=0.2.5"]
+s3 = ["fsspec[s3]>=2024.10.0,<2025.0.0", "universal-pathlib>=0.2.5"]
 
 [build-system]
 requires = ["hatchling"]
@@ -24,7 +21,7 @@ build-backend = "hatchling.build"
 only-include = ["src/pathvein", "tests", "Makefile"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["pathvein"]
+packages = ["src/pathvein"]
 
 [tool.uv]
 dev-dependencies = [
