@@ -1,3 +1,11 @@
+"""
+Command-line interface for Pathvein.
+
+This module provides the CLI functionality for scanning directories and shuffling files
+based on pattern specifications. It supports various commands including 'scan' for
+finding matches and 'shuffle' for reorganizing files.
+"""
+
 import logging
 from pathlib import Path
 from typing import List

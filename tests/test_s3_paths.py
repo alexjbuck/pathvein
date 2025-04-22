@@ -5,7 +5,7 @@ from pathvein.lib import (
     shuffle_to,
 )
 from pathvein.pattern import FileStructurePattern
-from tests import ephemeral_s3_bucket
+from . import ephemeral_s3_bucket
 
 S3_CONFIG = {
     "key": "minioadmin",

@@ -1,0 +1,280 @@
+---
+description: Python coding style guide
+globs: *.py
+alwaysApply: false
+---
+# Modern Python Style Guide 2025
+
+## Type Hints and Signatures
+
+### Function Signatures MUST Have Type Hints
+```python
+# Wrong ❌
+def process_data(data):
+    return data
+
+# Correct ✅
+from typing import List
+
+def process_data(data: List[str]) -> List[str]:
+    return data
+```
+
+### Library Code Should Use Protocol Classes for Polymorphism
+```python
+# Wrong ❌
+def save_file(file: 'FileObject') -> None:
+    file.write()
+
+# Correct ✅
+from typing import Protocol
+
+class Writable(Protocol):
+    def write(self, data: bytes) -> int: ...
+
+def save_file(file: Writable) -> None:
+    file.write(b'data')
+```
+
+## Code Structure and Formatting
+
+### Line Length: 88 Characters (Ruff Default)
+Lines should be limited to 88 characters to maintain readability.
+
+### Import Order
+```python
+# Correct order ✅
+# 1. Standard library imports
+import os
+import sys
+from pathlib import Path
+
+# 2. Third-party imports
+import numpy as np
+import pandas as pd
+
+# 3. Local application imports
+from .utils import helper_function
+```
+
+## Modern Python (3.8+) Features
+
+### Use Type Annotations Consistently
+```python
+# Always use type annotations ✅ when they're not otherwise inferrable.
+from typing import List, Dict, Optional
+data: List[Dict[str, Optional[int]]] = []
+```
+
+### Use TypeVar and Generic for Generic Functions and Classes
+```python
+from typing import TypeVar, Generic
+
+T = TypeVar('T')
+
+class Stack(Generic[T]):
+    def __init__(self) -> None:
+        self.items: List[T] = []
+    
+    def push(self, item: T) -> None:
+        self.items.append(item)
+    
+    def pop(self) -> T:
+        return self.items.pop()
+```
+
+### For Methods Returning Self, Use Future Annotations
+```python
+from __future__ import annotations
+
+class ChainableObject:
+    def set_value(self, value: int) -> ChainableObject:
+        self.value = value
+        return self
+```
+
+## Documentation
+
+### Docstrings for All Functions
+```python
+from typing import List
+
+def calculate_average(numbers: List[float]) -> float:
+    """Calculate the average of a list of numbers.
+    
+    Args:
+        numbers: A list of numbers to average
+        
+    Returns:
+        The average value
+        
+    Raises:
+        ValueError: If the list is empty
+    """
+    if not numbers:
+        raise ValueError("Cannot calculate average of empty list")
+    return sum(numbers) / len(numbers)
+```
+
+## Best Practices for Types
+
+### Use Pydantic Models for Dictionary Structures
+```python
+from pydantic import BaseModel, EmailStr, Field
+
+class UserData(BaseModel):
+    id: int = Field(gt=0)
+    name: str = Field(min_length=2)
+    email: EmailStr
+    active: bool = True
+```
+
+### Configuration Management with Pydantic
+```python
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    MAX_RETRIES: Final[int] = Field(gt=0, le=10)
+    API_KEY: Final[str]
+    DEBUG: bool = False
+
+    class Config:
+        env_file = ".env"
+```
+
+### Type Narrowing with TypeGuard
+```python
+from typing import TypeGuard
+
+def is_string_list(val: List[object]) -> TypeGuard[List[str]]:
+    """Check if all items in the list are strings."""
+    return all(isinstance(x, str) for x in val)
+
+def process_strings(items: list[object]) -> None:
+    if is_string_list(items):
+        # Here items is known to be List[str]
+        for s in items:
+            print(s.upper())  # Works because TypeGuard ensures these are strings
+```
+
+### Function Overloads for Multiple Signatures
+```python
+from typing import overload, Union
+
+@overload
+def process(x: int) -> int: ...
+
+@overload
+def process(x: str) -> str: ...
+
+def process(x: Union[int, str]) -> Union[int, str]:
+    if isinstance(x, int):
+        return x * 2
+    else:
+        return x.upper()
+```
+
+## Constants and Final Values
+
+### Mark Constants with Final
+```python
+from typing import Final
+
+MAX_RETRIES: Final = 5
+API_KEY: Final = "your-api-key"
+```
+
+## Type Checking Only Imports
+
+### Use TYPE_CHECKING for Circular Imports
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .circular_module import CircularDependency
+
+def process(x: int) -> "CircularDependency":
+    from .circular_module import CircularDependency
+    return CircularDependency(x)
+```
+
+## Tools and Enforcement
+
+### Required Tools
+1. **mypy** - Static type checker
+2. **ruff** - Fast Python linter and formatter
+3. **pydantic** - Data validation and settings management
+
+### mypy Configuration
+```toml
+# pyproject.toml
+[tool.mypy]
+python_version = "3.8"
+plugins = [
+    "pydantic.mypy"
+]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+pretty = true
+
+# Pydantic-specific settings
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+```
+
+### ruff Configuration
+```toml
+# pyproject.toml
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "B",    # flake8-bugbear
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "ANN",  # flake8-annotations
+    "BLE",  # flake8-blind-except
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "ARG",  # flake8-unused-arguments
+    "ERA",  # eradicate
+    "DTZ",  # flake8-datetimez
+    "T20",  # flake8-print
+    "RUF",  # Ruff-specific rules
+    "PT",   # flake8-pytest-style
+    "TCH",  # flake8-type-checking
+]
+ignore = [
+    "E203",  # Whitespace before ':'
+    "UP007"  # Use X | Y for union type annotations (not compatible with Python 3.8)
+]
+
+# Configure isort rules within ruff
+[tool.ruff.isort]
+known-first-party = ["your_package_name"]
+known-third-party = ["numpy", "pandas", "requests"]
+```
+
+### ruff Format Configuration
+```toml
+# pyproject.toml
+[tool.ruff.format]
+# Use the same settings as the linter
+line-length = 88
+indent-style = "space"
+quote-style = "double"
+```

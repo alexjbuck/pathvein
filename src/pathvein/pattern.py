@@ -1,3 +1,11 @@
+"""
+Pattern matching implementation for Pathvein.
+
+This module provides the core FileStructurePattern class that enables matching
+and copying of file structures based on pattern specifications. It supports both
+required and optional components, with a builder pattern for easy construction.
+"""
+
 import json
 import logging
 from time import time

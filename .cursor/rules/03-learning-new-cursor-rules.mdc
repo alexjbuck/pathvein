@@ -1,0 +1,134 @@
+---
+description: Mandatory framework for learning from errors and building new rules to improve the knowledge base.
+type: agent_requested
+---
+# Self-Learning and Error Correction
+
+## Overview
+This rule establishes a framework for Cursor to learn from its mistakes and build a growing knowledge base about this codebase. When Cursor makes an error that requires correction, it should analyze the error, understand the correct solution, and update its knowledge base accordingly. This includes strict rules for where to place new rules.
+
+## Error Analysis Process
+When a code suggestion generates an error or requires manual correction:
+
+1. Identify the specific error type and root cause
+2. Document the incorrect approach that was taken
+3. Document the correct solution that fixed the issue
+4. Create or update rules with this new knowledge
+
+## Automatic Learning
+Cursor should maintain a registry of common errors it has encountered and their solutions in the `.cursor/rules/registry` directory. Each time a new pattern is identified follow these rules:
+
+1. Always place rule files in PROJECT_ROOT/.cursor/rules/registry:
+    ```
+    .cursor/rules/registry
+    ├── your-rule-name.mdc
+    ├── another-rule.mdc
+    └── ...
+    ```
+
+2. Follow the naming convention:
+    - Use kebab-case for filenames
+    - Always use .mdc extension
+    - Make names descriptive of the rule's purpose
+
+3. Directory structure:
+    ```
+    PROJECT_ROOT/
+    ├── .cursor/
+    │   └── rules/
+    │       └── registry/
+    │           ├── your-rule-name.mdc
+    │           └── ...
+    └── ...
+    ```
+
+4. Never place rule files:
+    - In the project root
+    - In subdirectories outside .cursor/rules
+    - In any other location
+
+5. Determine which type of rule it should be:
+    - `auto_attached`, characterized by a `glob` value which is a list of filename glob patterns which should invoke the rule.
+    - `agent_requested`, characterized by a `description` which is read by the agent to determine if the rule should be invoked.
+    - `always`, characterized by always including the rule into every agent context.
+    - `manual`, characterized by requiring direct reference to the file for the rule to be invoked by another rule.
+6. Add YAML frontmatter metadata with `description`, `type`, and `glob` if this will be an `auto_attached` rule.
+7. Include examples of both incorrect and correct implementations.
+8. Reference any related rules that might apply.
+
+NOTE: The rule files that are located in `.cursor/rules/` and not inside of `.cursor/rules/registry/` are the anchor rules that seeded this project with its guidelines.
+
+examples:
+  - input: |
+      # Bad: Rule file in wrong location
+      rules/my-rule.mdc
+      my-rule.mdc
+      .rules/my-rule.mdc
+
+      # Good: Rule file in correct location
+      .cursor/rules/my-rule.mdc
+    output: "Correctly placed Cursor rule file"
+
+## Error Categories
+Maintain specific sections for different error types.
+
+### Type Errors
+Document common type errors specific to this codebase and how to properly type definitions.
+
+### Integration Errors
+Track errors related to integration tests and their resolution.
+
+### Performance Issues
+Document patterns that lead to performance issues and their optimized alternatives.
+
+### Dependency Management
+Track uv and yarn/package management issues and their solutions.
+
+## Continuous Improvement
+This rule should evolve over time as new errors are encountered and resolved. When implementing a fix that's been seen before, reference the relevant rule. When implementing a fix for a new type of error, create a new rule or update existing ones.
+
+## Example Learning Pattern
+      
+````
+---
+description: Type Error in Redpanda Connect Pipeline
+globs: *.py
+alwaysApply: false
+category: error-correction
+tags: typescript, redpanda, pipeline
+---
+
+# TypeScript Type Error in Pipeline Configuration
+
+## Incorrect Pattern
+```typescript
+const pipeline = createPipeline({
+  input: {
+    // Missing required type information
+    topic: "input-topic",
+    config: {}
+  },
+  // Other configuration
+});
+```
+
+## Correct Pattern
+```typescript
+const pipeline = createPipeline<InputSchema, OutputSchema>({
+  input: {
+    // Properly typed with required interface
+    topic: "input-topic",
+    config: {
+      consumerGroup: "my-group"
+    }
+  },
+  // Other configuration
+});
+```
+
+## Explanation
+Redpanda Connect pipelines require explicit type parameters and proper configuration of consumer groups to function correctly.
+````
+
+## Implementation Instructions
+When you encounter a pattern that seems to repeat or an error that occurs more than once, ask Cursor to create a new rule file documenting this pattern in the `.cursor/rules/registry` directory.
