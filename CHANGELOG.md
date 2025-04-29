@@ -1,5 +1,26 @@
 # pathvein
 
+## 0.9.1
+
+### Patch Changes
+
+- [#48](https://github.com/alexjbuck/pathvein/pull/48) [`c0a779c`](https://github.com/alexjbuck/pathvein/commit/c0a779caf42a3422306aaf28773858df3acd63b4) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Add Cursor rules for project documentation and code style
+
+  - Add project overview rule with repository structure and workflow
+  - Add Python code style guide with modern Python practices
+  - Add framework for learning from errors and building new rules
+
+- [#48](https://github.com/alexjbuck/pathvein/pull/48) [`c0a779c`](https://github.com/alexjbuck/pathvein/commit/c0a779caf42a3422306aaf28773858df3acd63b4) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Add Cursor rule for proper changeset creation
+
+  - Add detailed guidelines for creating changesets
+  - Include examples for both monorepo and monolithic scenarios
+  - Document best practices and file naming conventions
+
+- [#48](https://github.com/alexjbuck/pathvein/pull/48) [`c0a779c`](https://github.com/alexjbuck/pathvein/commit/c0a779caf42a3422306aaf28773858df3acd63b4) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Move package to src/ directory structure
+  - Relocate pathvein package to src/pathvein/
+  - Update package configuration files
+  - Add bench package initialization
+
 ## 0.9.0
 
 ### Minor Changes
