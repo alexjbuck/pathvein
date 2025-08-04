@@ -8,7 +8,7 @@
     "@changesets/cli": "^2.29.2",
     "replace-in-file": "^8.3.0",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   },
   "resolutions": {
     "cross-spawn": "^7.0.6"
