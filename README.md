@@ -19,9 +19,21 @@
 </div>
 <!-- markdownlint-restore MD033 MD041 -->
 
+## Installation
+
+```shell
+# Full installation with CLI (recommended)
+$ pip install 'pathvein[cli]'
+$ pipx install 'pathvein[cli]'
+$ uvx --with 'pathvein[cli]' pathvein
+
+# Library only (for programmatic use)
+$ pip install pathvein
+```
+
 ## Library usage
 
-If you wish to integrate the `scan` or `shuffle` functions into your application you likely want 
+If you wish to integrate the `scan` or `shuffle` functions into your application you likely want
 to use `pathvein` as a library. Follow the example below for how to use this API.
 
 ```python
@@ -93,10 +105,31 @@ results = shuffle(
 )
 ```
 
+### Advanced: Pattern Assessment
+
+The `assess()` function works backwards from a file to determine which patterns it belongs to:
+
+```python
+from pathvein import assess, FileStructurePattern
+
+# Given a file deep in a directory structure, find which pattern it matches
+patterns = [pattern1, pattern2, pattern3]
+
+for result in assess(Path("data/experiment_1/results/output.csv"), patterns):
+    print(f"File belongs to pattern: {result.pattern}")
+    print(f"Pattern root directory: {result.source}")
+```
+
+This is useful for:
+- **Validation**: Check if a file belongs to a known pattern
+- **Discovery**: Find the root directory of a pattern given any file within it
+- **Reverse engineering**: Determine what pattern an existing file structure follows
+
 ## CLI usage
 
-If you install the CLI, it currently implements the `shuffle_to` API with the single destination
-provided in the command line.
+The CLI implements the `shuffle_to` API with a single destination provided in the command line.
+
+**Note**: The CLI requires the `[cli]` extra: `pip install 'pathvein[cli]'`
 
 This library does not yet have a settled method for dynamically computing the destination folder
 and providing that via commandline interface.
@@ -105,12 +138,6 @@ If you need to use the dynamic destination feature of the library, you should no
 should instead write a script to employ the library `shuffle_with` or `shuffle` features.
 
 ```shell
-# Install using your favorite python package installer (pip or pipx)
-$ pipx install 'pathvein[cli]'
-# or 
-$ uv pip install 'pathvein[cli]'
-
-
 # View the commandline interface help
 $ pathvein --help
 pathvein -h
@@ -147,3 +174,25 @@ pathvein shuffle source_dir dest_dir -p pattern.config -p additional.config
 This library makes use of caching to improve performance. While iterating through the search directories, the results of `path.iterdir()` are cached into a thread-safe cache.
 This program behaves in a way that causes multiple calls to `path.iterdir()` for each path in the tree. When this involves network requests, the cached function can be several
 orders of magnitude faster. Even for local file system calls (i.e. `path` is a POSIX path) this can be over 100x faster by caching.
+
+### Rust Backend
+
+For maximum performance, pathvein includes a Rust backend that provides:
+- **5-10x faster** directory walking with parallel traversal
+- **3-5x faster** pattern matching with compiled globs
+- Automatic fallback to pure Python if Rust extension not available
+
+The Rust backend is built automatically if you have the Rust toolchain installed. If Rust is not available, pathvein falls back to pure Python seamlessly.
+
+```shell
+# Install from PyPI (when available)
+$ pip install pathvein
+
+# Build from source (builds with Rust if cargo available)
+$ pip install .
+
+# Check which backend is active
+$ python -c "from pathvein import get_backend_info; print(get_backend_info())"
+```
+
+**Note**: Requires Rust toolchain (`cargo`) for building from source. If not installed, falls back to pure Python automatically.

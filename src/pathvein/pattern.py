@@ -11,14 +11,13 @@ import logging
 from time import time
 from copy import deepcopy
 from dataclasses import dataclass, field
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Iterable, List, Set, Tuple
 from concurrent.futures import ThreadPoolExecutor, Future, wait
 
 from typing_extensions import Self
 
-from ._path_utils import iterdir, stream_copy
+from ._path_utils import iterdir, stream_copy, pattern_match
 
 logger = logging.getLogger(__name__)
 
@@ -61,31 +60,75 @@ class FileStructurePattern:
 
     @classmethod
     def load_json(cls, json_path: Path) -> Self:
-        json_str = json_path.read_text()
+        """Load a FileStructurePattern from a JSON file
+
+        Args:
+            json_path: Path to JSON file containing pattern specification
+
+        Returns:
+            FileStructurePattern instance
+
+        Raises:
+            FileNotFoundError: If json_path does not exist
+            json.JSONDecodeError: If file contains invalid JSON
+            ValueError: If JSON structure is invalid for pattern specification
+        """
+        try:
+            json_str = json_path.read_text()
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"Pattern file not found: {json_path}") from e
+        except Exception as e:
+            raise ValueError(f"Error reading pattern file {json_path}: {e}") from e
         return cls.from_json(json_str)
 
     @classmethod
     def from_json(cls, spec_str: str) -> Self:
-        spec = json.loads(spec_str)
-        return (
-            cls()
-            .set_directory_name(spec.get("directory_name"))
-            .add_files(spec.get("files", []))
-            .add_files(spec.get("optional_files", []), is_optional=True)
-            .add_directories(
-                (
-                    cls.from_json(subdirectory_spec)
-                    for subdirectory_spec in spec.get("directories", [])
+        """Create a FileStructurePattern from a JSON string
+
+        Args:
+            spec_str: JSON string containing pattern specification
+
+        Returns:
+            FileStructurePattern instance
+
+        Raises:
+            json.JSONDecodeError: If spec_str is not valid JSON
+            ValueError: If JSON structure is invalid for pattern specification
+        """
+        try:
+            spec = json.loads(spec_str)
+        except json.JSONDecodeError as e:
+            raise json.JSONDecodeError(
+                f"Invalid JSON in pattern specification: {e.msg}", e.doc, e.pos
+            ) from e
+
+        if not isinstance(spec, dict):
+            raise ValueError(
+                f"Pattern specification must be a JSON object, got {type(spec).__name__}"
+            )
+
+        try:
+            return (
+                cls()
+                .set_directory_name(spec.get("directory_name", "*"))
+                .add_files(spec.get("files", []))
+                .add_files(spec.get("optional_files", []), is_optional=True)
+                .add_directories(
+                    (
+                        cls.from_json(subdirectory_spec)
+                        for subdirectory_spec in spec.get("directories", [])
+                    )
+                )
+                .add_directories(
+                    (
+                        cls.from_json(subdirectory_spec)
+                        for subdirectory_spec in spec.get("optional_directories", [])
+                    ),
+                    is_optional=True,
                 )
             )
-            .add_directories(
-                (
-                    cls.from_json(subdirectory_spec)
-                    for subdirectory_spec in spec.get("optional_directories", [])
-                ),
-                is_optional=True,
-            )
-        )
+        except (TypeError, AttributeError) as e:
+            raise ValueError(f"Invalid pattern specification structure: {e}") from e
 
     def to_json(self: Self) -> str:
         # Deepcopy prevents mutating self during serialization.
@@ -204,7 +247,7 @@ class FileStructurePattern:
         logger.debug("%s Evaluating match for %s against %s", lpad, dirpath, self)
 
         # Short circuit check for directory name pattern match
-        if self.directory_name and not fnmatch(dirpath.name, self.directory_name):
+        if self.directory_name and not pattern_match(dirpath.name, self.directory_name):
             logger.debug(
                 "%s x Failed match on directory name: Expected: %s, Found: %s",
                 lpad,
@@ -218,10 +261,10 @@ class FileStructurePattern:
             # If all input filenames do not match a pattern, then its a missed pattern, and not a match
             # The failing case is when no files match a pattern, aka all files do not match.
             #
-            # NOTE(Performance): fnmatch internally runs a regex compile on the pattern and caches the result.
+            # NOTE(Performance): pattern_match caches compiled regex patterns via lru_cache
             # This means its beneficial to reuse the same pattern multiple times in a row, so it is preferred
             # to first iterate over the patterns, and then iterate over the filenames instead of the other way around.
-            if _none_of(fnmatch(filename, pattern) for filename in filenames):
+            if _none_of(pattern_match(filename, pattern) for filename in filenames):
                 logger.debug(
                     "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
                     lpad,
@@ -306,7 +349,7 @@ class FileStructurePattern:
                 "Checking file against patterns",
                 extra={"file": file, "pattern": self.all_files},
             )
-            if any(fnmatch(path.name, pattern) for pattern in self.all_files):
+            if any(pattern_match(path.name, pattern) for pattern in self.all_files):
                 logger.debug("Found match")
                 if not dryrun:
                     logger.debug("Beginning copy")
@@ -403,7 +446,7 @@ class FileStructurePattern:
                         extra={"file": path.name, "pattern": pattern.all_files},
                     )
                     if any(
-                        fnmatch(path.name, file_pattern)
+                        pattern_match(path.name, file_pattern)
                         for file_pattern in pattern.all_files
                     ):
                         logger.debug("Found match")

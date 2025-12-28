@@ -43,8 +43,6 @@ jobs:
         run: |
           git config --global user.email alexjbuck@gmail.com
           git config --global user.name Alexander Buck
-      - name: Build packages
-        run: yarn run build
       - id: changesets
         name: Run Changesets — Create a Release Pull Request or merge a Release Pull Request
         uses: changesets/action@v1.4.9
@@ -54,7 +52,6 @@ jobs:
           title: Release 🚀
           version: yarn run version
           commit: Release 🚀
-          publish: yarn run publish
           setupGitUser: false
       - name: Get version
         id: version
@@ -62,9 +59,101 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         if: steps.changesets.outputs.hasChangesets == 'false'
-  
-  create-release:
+
+  build-wheels:
+    name: Build wheels on ${{ matrix.platform.os }}
     needs: changesets
+    if: needs.changesets.outputs.should-deploy == 'true'
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          # Linux x86_64
+          - runner: ubuntu-latest
+            os: linux
+            target: x86_64
+          # Linux aarch64
+          - runner: ubuntu-latest
+            os: linux
+            target: aarch64
+          # macOS x86_64 (Intel)
+          - runner: macos-13
+            os: macos
+            target: x86_64
+          # macOS arm64 (Apple Silicon)
+          - runner: macos-14
+            os: macos
+            target: aarch64
+          # Windows x86_64
+          - runner: windows-latest
+            os: windows
+            target: x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --interpreter 3.8 3.9 3.10 3.11 3.12 3.13
+          sccache: 'true'
+          manylinux: auto
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform.os }}-${{ matrix.platform.target }}
+          path: dist
+
+  build-sdist:
+    name: Build source distribution
+    needs: changesets
+    if: needs.changesets.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+  publish:
+    name: Publish to PyPI
+    needs: [changesets, build-wheels, build-sdist]
+    if: needs.changesets.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*
+
+  create-release:
+    needs: [changesets, publish]
     if: needs.changesets.outputs.should-deploy == 'true'
     runs-on: ubuntu-latest
     permissions: write-all
