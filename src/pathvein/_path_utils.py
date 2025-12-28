@@ -17,7 +17,7 @@ from typing import Generator, List, Pattern, Tuple
 logger = logging.getLogger(__name__)
 
 
-def stream_copy(source: Path, destination: Path, chunk_size=256 * 1024) -> None:
+def stream_copy(source: Path, destination: Path, chunk_size: int = 256 * 1024) -> None:
     """Copy a file from source to destination using a streaming copy"""
     logger.debug(
         "Stream copy initiated", extra={"file": source, "destination": destination}

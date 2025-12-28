@@ -59,7 +59,29 @@ def assess(
     file: Path,
     patterns: Iterable[FileStructurePattern],
 ) -> Generator[ScanResult, None, None]:
-    """Assess a single file path for a pattern that it could fit into and check if that pattern is valid given the input file"""
+    """Assess which patterns a file belongs to and find the pattern root directories.
+
+    Given a file path, this function determines which patterns it could belong to
+    by working backwards from the file to find candidate root directories, then
+    validating that those roots actually match the pattern.
+
+    This is useful for:
+    - Reverse engineering: Given a file, what pattern does it belong to?
+    - Validation: Does this file belong to a known pattern?
+    - Discovery: What's the root directory of the pattern containing this file?
+
+    Args:
+        file: Path to a file to assess
+        patterns: Patterns to check against
+
+    Yields:
+        ScanResult objects with the root directory and matched pattern
+
+    Example:
+        >>> patterns = [pattern1, pattern2]
+        >>> for result in assess(Path("data/exp1/results.csv"), patterns):
+        ...     print(f"File belongs to pattern at: {result.source}")
+    """
     logger.debug("Assessing %s for patterns %s", file, patterns)
     for pattern in patterns:
         logger.debug("Assessing %s for pattern %s", file, pattern)

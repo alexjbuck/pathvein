@@ -105,6 +105,26 @@ results = shuffle(
 )
 ```
 
+### Advanced: Pattern Assessment
+
+The `assess()` function works backwards from a file to determine which patterns it belongs to:
+
+```python
+from pathvein import assess, FileStructurePattern
+
+# Given a file deep in a directory structure, find which pattern it matches
+patterns = [pattern1, pattern2, pattern3]
+
+for result in assess(Path("data/experiment_1/results/output.csv"), patterns):
+    print(f"File belongs to pattern: {result.pattern}")
+    print(f"Pattern root directory: {result.source}")
+```
+
+This is useful for:
+- **Validation**: Check if a file belongs to a known pattern
+- **Discovery**: Find the root directory of a pattern given any file within it
+- **Reverse engineering**: Determine what pattern an existing file structure follows
+
 ## CLI usage
 
 The CLI implements the `shuffle_to` API with a single destination provided in the command line.
