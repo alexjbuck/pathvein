@@ -19,9 +19,21 @@
 </div>
 <!-- markdownlint-restore MD033 MD041 -->
 
+## Installation
+
+```shell
+# Full installation with CLI (recommended)
+$ pip install 'pathvein[cli]'
+$ pipx install 'pathvein[cli]'
+$ uvx --with 'pathvein[cli]' pathvein
+
+# Library only (for programmatic use)
+$ pip install pathvein
+```
+
 ## Library usage
 
-If you wish to integrate the `scan` or `shuffle` functions into your application you likely want 
+If you wish to integrate the `scan` or `shuffle` functions into your application you likely want
 to use `pathvein` as a library. Follow the example below for how to use this API.
 
 ```python
@@ -97,6 +109,8 @@ results = shuffle(
 
 The CLI implements the `shuffle_to` API with a single destination provided in the command line.
 
+**Note**: The CLI requires the `[cli]` extra: `pip install 'pathvein[cli]'`
+
 This library does not yet have a settled method for dynamically computing the destination folder
 and providing that via commandline interface.
 
@@ -104,14 +118,6 @@ If you need to use the dynamic destination feature of the library, you should no
 should instead write a script to employ the library `shuffle_with` or `shuffle` features.
 
 ```shell
-# Install using your favorite python package installer
-$ pipx install pathvein
-# or
-$ pip install pathvein
-# or use directly with uvx
-$ uvx pathvein
-
-
 # View the commandline interface help
 $ pathvein --help
 pathvein -h
