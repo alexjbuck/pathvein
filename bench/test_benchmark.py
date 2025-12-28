@@ -42,10 +42,10 @@ from pathvein._path_utils import pattern_match
 def pytest_collection():
     """Display backend info when tests are collected."""
     info = get_backend_info()
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Benchmarking with {info['backend'].upper()} backend")
     print(f"Has Rust: {info['has_rust']}")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
 
 @pytest.fixture(scope="session")

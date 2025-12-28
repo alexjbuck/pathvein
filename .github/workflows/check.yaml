@@ -12,10 +12,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  rust-checks:
-    name: Rust formatting and linting
+  check:
+    name: Build and check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Checkout Git repository
         uses: actions/checkout@v4.1.1
@@ -25,56 +25,26 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Check Rust formatting
-        run: cargo fmt --check
-
-      - name: Run Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-  python-checks:
-    name: Python formatting
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout Git repository
-        uses: actions/checkout@v4.1.1
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install formatters
-        run: pip install black ruff
-
-      - name: Check Python formatting with black
-        run: black --check . --exclude '/(\.venv|venv|\.git|target|dist)/'
-
-      - name: Lint with ruff
-        run: ruff check .
-
-  check:
-    name: Build and check
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Checkout Git repository
-        uses: actions/checkout@v4.1.1
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+
       - name: Enable Corepack
         run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v4.1.0
         with:
           cache: yarn
           node-version-file: .node-version
+
       - name: Install Node.js dependencies
         run: yarn install
-      - name: Check
+
+      - name: Check (includes Rust format/clippy, Python ruff, mypy, tests)
         run: yarn check
+
       - name: Build
         run: yarn build
 

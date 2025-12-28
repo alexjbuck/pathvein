@@ -156,8 +156,8 @@ def generate_markdown_comparison(rust_data: Dict, python_data: Dict) -> str:
             lines.extend(
                 [
                     f"**{display_name}**",
-                    f"- Python: {python['mean']*1000:.3f}ms ± {python['stddev']*1000:.3f}ms",
-                    f"- Rust: {rust['mean']*1000:.3f}ms ± {rust['stddev']*1000:.3f}ms",
+                    f"- Python: {python['mean'] * 1000:.3f}ms ± {python['stddev'] * 1000:.3f}ms",
+                    f"- Rust: {rust['mean'] * 1000:.3f}ms ± {rust['stddev'] * 1000:.3f}ms",
                     f"- Speedup: **{speedup:.2f}x**",
                     "",
                 ]
@@ -202,8 +202,8 @@ def generate_text_comparison(rust_data: Dict, python_data: Dict) -> str:
         lines.extend(
             [
                 f"{display_name}:",
-                f"  Python: {python['mean']*1000:.3f}ms ± {python['stddev']*1000:.3f}ms",
-                f"  Rust:   {rust['mean']*1000:.3f}ms ± {rust['stddev']*1000:.3f}ms",
+                f"  Python: {python['mean'] * 1000:.3f}ms ± {python['stddev'] * 1000:.3f}ms",
+                f"  Rust:   {rust['mean'] * 1000:.3f}ms ± {rust['stddev'] * 1000:.3f}ms",
                 f"  Speedup: {speedup:.2f}x",
                 "",
             ]
