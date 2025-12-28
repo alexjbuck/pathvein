@@ -152,10 +152,11 @@ def shuffle(
         try:
             if use_threading:
                 pattern.threaded_copy(
-                    source, destination,
+                    source,
+                    destination,
                     overwrite=overwrite,
                     dryrun=dryrun,
-                    max_workers=max_workers
+                    max_workers=max_workers,
                 )
             else:
                 pattern.copy(source, destination, overwrite=overwrite, dryrun=dryrun)
@@ -204,7 +205,7 @@ def shuffle_to(
         overwrite=overwrite,
         dryrun=dryrun,
         use_threading=use_threading,
-        max_workers=max_workers
+        max_workers=max_workers,
     )
 
 
@@ -242,5 +243,5 @@ def shuffle_with(
         overwrite=overwrite,
         dryrun=dryrun,
         use_threading=use_threading,
-        max_workers=max_workers
+        max_workers=max_workers,
     )

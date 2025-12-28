@@ -76,13 +76,9 @@ class FileStructurePattern:
         try:
             json_str = json_path.read_text()
         except FileNotFoundError as e:
-            raise FileNotFoundError(
-                f"Pattern file not found: {json_path}"
-            ) from e
+            raise FileNotFoundError(f"Pattern file not found: {json_path}") from e
         except Exception as e:
-            raise ValueError(
-                f"Error reading pattern file {json_path}: {e}"
-            ) from e
+            raise ValueError(f"Error reading pattern file {json_path}: {e}") from e
         return cls.from_json(json_str)
 
     @classmethod
@@ -103,9 +99,7 @@ class FileStructurePattern:
             spec = json.loads(spec_str)
         except json.JSONDecodeError as e:
             raise json.JSONDecodeError(
-                f"Invalid JSON in pattern specification: {e.msg}",
-                e.doc,
-                e.pos
+                f"Invalid JSON in pattern specification: {e.msg}", e.doc, e.pos
             ) from e
 
         if not isinstance(spec, dict):
@@ -116,7 +110,7 @@ class FileStructurePattern:
         try:
             return (
                 cls()
-                .set_directory_name(spec.get("directory_name"))
+                .set_directory_name(spec.get("directory_name", "*"))
                 .add_files(spec.get("files", []))
                 .add_files(spec.get("optional_files", []), is_optional=True)
                 .add_directories(
@@ -134,9 +128,7 @@ class FileStructurePattern:
                 )
             )
         except (TypeError, AttributeError) as e:
-            raise ValueError(
-                f"Invalid pattern specification structure: {e}"
-            ) from e
+            raise ValueError(f"Invalid pattern specification structure: {e}") from e
 
     def to_json(self: Self) -> str:
         # Deepcopy prevents mutating self during serialization.

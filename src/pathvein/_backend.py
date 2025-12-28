@@ -6,7 +6,6 @@ otherwise falls back to pure Python implementations.
 """
 
 import logging
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)

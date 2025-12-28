@@ -14,8 +14,9 @@ from pathlib import Path
 from typing import List
 
 try:
-    import typer
+    import typer  # type: ignore[import-not-found]
     from typing_extensions import Annotated
+
     HAS_TYPER = True
 except ImportError:
     HAS_TYPER = False
@@ -95,14 +96,13 @@ def main():
         print(
             "Error: CLI functionality requires typer.\n"
             "Install with: pip install 'pathvein[cli]'",
-            file=sys.stderr
+            file=sys.stderr,
         )
         sys.exit(1)
 
     # Configure log file path (cross-platform and configurable)
     log_file = os.getenv(
-        "PATHVEIN_LOG_FILE",
-        os.path.join(tempfile.gettempdir(), "pathvein.log")
+        "PATHVEIN_LOG_FILE", os.path.join(tempfile.gettempdir(), "pathvein.log")
     )
 
     logging.basicConfig(
