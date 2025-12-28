@@ -107,19 +107,36 @@ def shuffle(
     shuffle_def: Iterable[ShuffleInput],
     overwrite: bool = False,
     dryrun: bool = False,
+    use_threading: bool = False,
+    max_workers: int = 4,
 ) -> List[ShuffleResult]:
     """
     Recursively scan a source path for pattern-spec directory structures and copy them to their destination
 
     ShuffleInput.source will be copied to ShuffleInput.destination, not _into_ it.
     The direct children of ShuffleInput.source will be direct children of ShuffleInput.destination
+
+    Args:
+        shuffle_def: Iterable of ShuffleInput defining source->destination mappings
+        overwrite: Whether to overwrite existing files (default: False)
+        dryrun: If True, don't actually copy files (default: False)
+        use_threading: If True, use parallel file copying (default: False)
+        max_workers: Number of worker threads for parallel copying (default: 4)
     """
 
     # Side effect time!
     copied = []
     for source, destination, pattern in shuffle_def:
         try:
-            pattern.copy(source, destination, overwrite=overwrite, dryrun=dryrun)
+            if use_threading:
+                pattern.threaded_copy(
+                    source, destination,
+                    overwrite=overwrite,
+                    dryrun=dryrun,
+                    max_workers=max_workers
+                )
+            else:
+                pattern.copy(source, destination, overwrite=overwrite, dryrun=dryrun)
             logger.debug("%s copied to %s", source, destination)
             copied.append(ShuffleResult(source, destination, pattern))
         except FileExistsError:
@@ -128,7 +145,7 @@ def shuffle(
                 destination,
                 source.name,
             )
-    logger.info("Copied %s missions", len(copied))
+    logger.info("Copied %s directories", len(copied))
     return copied
 
 
@@ -137,11 +154,21 @@ def shuffle_to(
     destination: Path,
     overwrite: bool = False,
     dryrun: bool = False,
+    use_threading: bool = False,
+    max_workers: int = 4,
 ) -> List[ShuffleResult]:
     """
-    Recursively scan a source path for pattern-spec directory structures and copy them into a single destination_fn
+    Recursively scan a source path for pattern-spec directory structures and copy them into a single destination
 
     Each match will be copied into a flat structure at `destination / match.source.name`
+
+    Args:
+        matches: Iterable of ScanResult from scan()
+        destination: Root destination directory
+        overwrite: Whether to overwrite existing files (default: False)
+        dryrun: If True, don't actually copy files (default: False)
+        use_threading: If True, use parallel file copying (default: False)
+        max_workers: Number of worker threads for parallel copying (default: 4)
     """
 
     shuffle_def = map(
@@ -150,7 +177,13 @@ def shuffle_to(
         ),
         matches,
     )
-    return shuffle(shuffle_def, overwrite=overwrite, dryrun=dryrun)
+    return shuffle(
+        shuffle_def,
+        overwrite=overwrite,
+        dryrun=dryrun,
+        use_threading=use_threading,
+        max_workers=max_workers
+    )
 
 
 def shuffle_with(
@@ -158,12 +191,22 @@ def shuffle_with(
     destination_fn: Callable[[ScanResult], Path],
     overwrite: bool = False,
     dryrun: bool = False,
+    use_threading: bool = False,
+    max_workers: int = 4,
 ) -> List[ShuffleResult]:
     """
-    Recursively scan a source path for pattern-spec directory structures and copy them to the destination_fn
+    Recursively scan a source path for pattern-spec directory structures and copy them to computed destinations
 
     Provide a function that takes a ScanResult and returns a destination Path for that result. This allows for
     expressive control over the destination of each match.
+
+    Args:
+        matches: Iterable of ScanResult from scan()
+        destination_fn: Function that computes destination path from ScanResult
+        overwrite: Whether to overwrite existing files (default: False)
+        dryrun: If True, don't actually copy files (default: False)
+        use_threading: If True, use parallel file copying (default: False)
+        max_workers: Number of worker threads for parallel copying (default: 4)
     """
 
     shuffle_def = map(
@@ -172,4 +215,10 @@ def shuffle_with(
         ),
         matches,
     )
-    return shuffle(shuffle_def, overwrite=overwrite, dryrun=dryrun)
+    return shuffle(
+        shuffle_def,
+        overwrite=overwrite,
+        dryrun=dryrun,
+        use_threading=use_threading,
+        max_workers=max_workers
+    )

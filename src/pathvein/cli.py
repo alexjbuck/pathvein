@@ -66,7 +66,7 @@ def cli_shuffle(
     verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
 ) -> None:
     set_logger_level(verbosity)
-    logger.info("Beginning shuffle matches from %s to %s", destination)
+    logger.info("Beginning shuffle matches from %s to %s", source, destination)
 
     patterns = (FileStructurePattern.load_json(path) for path in pattern_spec_paths)
     matches = scan(source, patterns)

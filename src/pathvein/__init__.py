@@ -9,6 +9,8 @@ matching, with powerful pattern matching capabilities.
 from pathvein.pattern import FileStructurePattern as FileStructurePattern
 from pathvein.lib import scan as scan
 from pathvein.lib import shuffle as shuffle
+from pathvein.lib import shuffle_to as shuffle_to
+from pathvein.lib import shuffle_with as shuffle_with
 from pathvein.lib import assess as assess
 from pathvein.lib import ShuffleInput as ShuffleInput
 from pathvein.lib import ShuffleResult as ShuffleResult
@@ -18,6 +20,8 @@ __all__ = [
     "FileStructurePattern",
     "scan",
     "shuffle",
+    "shuffle_to",
+    "shuffle_with",
     "assess",
     "ShuffleInput",
     "ShuffleResult",
