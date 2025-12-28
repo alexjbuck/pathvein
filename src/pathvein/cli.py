@@ -45,6 +45,7 @@ def set_logger_level(verbosity: int, default: int = logging.ERROR) -> None:
 
 
 if HAS_TYPER:
+    # CLI functions are thin wrappers around core library functions
     cli = typer.Typer(context_settings=context_settings)
 
     @cli.command("scan")
@@ -53,6 +54,7 @@ if HAS_TYPER:
         pattern_spec_paths: Annotated[List[Path], typer.Option("--pattern", "-p")],
         verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
     ) -> None:
+        """Scan a directory for patterns and print matching paths."""
         set_logger_level(verbosity)
 
         patterns = (FileStructurePattern.load_json(path) for path in pattern_spec_paths)
@@ -69,6 +71,7 @@ if HAS_TYPER:
         dryrun: bool = False,
         verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
     ) -> None:
+        """Scan for patterns and copy matching directories to destination."""
         set_logger_level(verbosity)
         logger.info("Beginning shuffle matches from %s to %s", source, destination)
 
