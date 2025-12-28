@@ -1,6 +1,6 @@
 use globset::{Glob, GlobSet, GlobSetBuilder};
-use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
 
 /// High-performance glob pattern matcher using Rust's globset
 ///

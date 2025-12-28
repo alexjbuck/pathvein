@@ -46,9 +46,7 @@ pub fn walk_parallel(
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<DirEntry>> {
-    let walker = WalkDir::new(&path)
-        .follow_links(follow_links)
-        .min_depth(0);
+    let walker = WalkDir::new(&path).follow_links(follow_links).min_depth(0);
 
     let walker = if let Some(depth) = max_depth {
         walker.max_depth(depth)
