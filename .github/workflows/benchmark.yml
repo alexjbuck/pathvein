@@ -57,6 +57,7 @@ jobs:
       - name: Run pytest-benchmark
         run: |
           pytest bench/test_benchmark.py \
+            -o addopts="" \
             --benchmark-only \
             --benchmark-json=benchmark_${{ matrix.backend }}.json \
             --benchmark-warmup=on \
