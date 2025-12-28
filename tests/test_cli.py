@@ -1,8 +1,5 @@
 """Tests for CLI functionality."""
 
-import json
-from pathlib import Path
-
 import pytest
 from typer.testing import CliRunner
 
@@ -16,9 +13,7 @@ runner = CliRunner()
 def temp_pattern_file(tmp_path):
     """Create a temporary pattern file for testing."""
     pattern = FileStructurePattern(
-        directory_name="test_*",
-        files=["data.csv"],
-        optional_files=["notes.txt"]
+        directory_name="test_*", files=["data.csv"], optional_files=["notes.txt"]
     )
     pattern_file = tmp_path / "pattern.json"
     pattern_file.write_text(pattern.to_json())
@@ -56,8 +51,7 @@ class TestCLIScan:
     def test_scan_finds_matches(self, temp_source_dir, temp_pattern_file):
         """Test that scan command finds matching directories."""
         result = runner.invoke(
-            cli,
-            ["scan", str(temp_source_dir), "--pattern", str(temp_pattern_file)]
+            cli, ["scan", str(temp_source_dir), "--pattern", str(temp_pattern_file)]
         )
 
         assert result.exit_code == 0
@@ -71,8 +65,7 @@ class TestCLIScan:
         empty_dir.mkdir()
 
         result = runner.invoke(
-            cli,
-            ["scan", str(empty_dir), "--pattern", str(temp_pattern_file)]
+            cli, ["scan", str(empty_dir), "--pattern", str(temp_pattern_file)]
         )
 
         assert result.exit_code == 0
@@ -83,8 +76,7 @@ class TestCLIScan:
         missing_file = tmp_path / "missing.json"
 
         result = runner.invoke(
-            cli,
-            ["scan", str(temp_source_dir), "--pattern", str(missing_file)]
+            cli, ["scan", str(temp_source_dir), "--pattern", str(missing_file)]
         )
 
         assert result.exit_code != 0
@@ -95,8 +87,7 @@ class TestCLIScan:
         bad_pattern.write_text("not valid json {")
 
         result = runner.invoke(
-            cli,
-            ["scan", str(temp_source_dir), "--pattern", str(bad_pattern)]
+            cli, ["scan", str(temp_source_dir), "--pattern", str(bad_pattern)]
         )
 
         assert result.exit_code != 0
@@ -104,18 +95,12 @@ class TestCLIScan:
     def test_scan_multiple_patterns(self, temp_source_dir, tmp_path):
         """Test scan with multiple pattern files."""
         # Create first pattern
-        pattern1 = FileStructurePattern(
-            directory_name="test_*",
-            files=["data.csv"]
-        )
+        pattern1 = FileStructurePattern(directory_name="test_*", files=["data.csv"])
         pattern_file1 = tmp_path / "pattern1.json"
         pattern_file1.write_text(pattern1.to_json())
 
         # Create second pattern
-        pattern2 = FileStructurePattern(
-            directory_name="other",
-            files=["random.txt"]
-        )
+        pattern2 = FileStructurePattern(directory_name="other", files=["random.txt"])
         pattern_file2 = tmp_path / "pattern2.json"
         pattern_file2.write_text(pattern2.to_json())
 
@@ -124,9 +109,11 @@ class TestCLIScan:
             [
                 "scan",
                 str(temp_source_dir),
-                "--pattern", str(pattern_file1),
-                "--pattern", str(pattern_file2)
-            ]
+                "--pattern",
+                str(pattern_file1),
+                "--pattern",
+                str(pattern_file2),
+            ],
         )
 
         assert result.exit_code == 0
@@ -137,7 +124,7 @@ class TestCLIScan:
         """Test scan with verbosity flags."""
         result = runner.invoke(
             cli,
-            ["scan", str(temp_source_dir), "--pattern", str(temp_pattern_file), "-v"]
+            ["scan", str(temp_source_dir), "--pattern", str(temp_pattern_file), "-v"],
         )
 
         assert result.exit_code == 0
@@ -146,7 +133,7 @@ class TestCLIScan:
         """Test scan with multiple verbosity flags."""
         result = runner.invoke(
             cli,
-            ["scan", str(temp_source_dir), "--pattern", str(temp_pattern_file), "-vvv"]
+            ["scan", str(temp_source_dir), "--pattern", str(temp_pattern_file), "-vvv"],
         )
 
         assert result.exit_code == 0
@@ -165,8 +152,9 @@ class TestCLIShuffle:
                 "shuffle",
                 str(temp_source_dir),
                 str(dest),
-                "--pattern", str(temp_pattern_file)
-            ]
+                "--pattern",
+                str(temp_pattern_file),
+            ],
         )
 
         assert result.exit_code == 0
@@ -176,7 +164,9 @@ class TestCLIShuffle:
         assert (dest / "test_002" / "data.csv").exists()
         assert not (dest / "other").exists()
 
-    def test_shuffle_shows_operations(self, temp_source_dir, temp_pattern_file, tmp_path):
+    def test_shuffle_shows_operations(
+        self, temp_source_dir, temp_pattern_file, tmp_path
+    ):
         """Test that shuffle shows what it's doing."""
         dest = tmp_path / "dest"
 
@@ -186,8 +176,9 @@ class TestCLIShuffle:
                 "shuffle",
                 str(temp_source_dir),
                 str(dest),
-                "--pattern", str(temp_pattern_file)
-            ]
+                "--pattern",
+                str(temp_pattern_file),
+            ],
         )
 
         assert result.exit_code == 0
@@ -210,8 +201,9 @@ class TestCLIShuffle:
                 "shuffle",
                 str(temp_source_dir),
                 str(dest),
-                "--pattern", str(temp_pattern_file)
-            ]
+                "--pattern",
+                str(temp_pattern_file),
+            ],
         )
 
         # The command should complete even if some copies fail
@@ -227,9 +219,10 @@ class TestCLIShuffle:
                 "shuffle",
                 str(temp_source_dir),
                 str(dest),
-                "--pattern", str(temp_pattern_file),
-                "--dryrun"
-            ]
+                "--pattern",
+                str(temp_pattern_file),
+                "--dryrun",
+            ],
         )
 
         assert result.exit_code == 0
@@ -246,9 +239,10 @@ class TestCLIShuffle:
                 "shuffle",
                 str(temp_source_dir),
                 str(dest),
-                "--pattern", str(temp_pattern_file),
-                "-vv"
-            ]
+                "--pattern",
+                str(temp_pattern_file),
+                "-vv",
+            ],
         )
 
         assert result.exit_code == 0
@@ -265,8 +259,9 @@ class TestCLIShuffle:
                 "shuffle",
                 str(empty_source),
                 str(dest),
-                "--pattern", str(temp_pattern_file)
-            ]
+                "--pattern",
+                str(temp_pattern_file),
+            ],
         )
 
         assert result.exit_code == 0
