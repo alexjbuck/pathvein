@@ -156,19 +156,34 @@ For maximum performance, pathvein can be built with an optional Rust backend tha
 - **3-5x faster** pattern matching with compiled globs
 - Automatic fallback to pure Python if Rust is not available
 
-To use the Rust-accelerated version:
+The Rust backend is completely optional - pathvein works perfectly fine as pure Python. The same code works with both backends with no changes required.
+
+#### Installing from PyPI (when available)
 
 ```shell
-# Install with Rust backend (requires Rust toolchain)
-$ pip install 'pathvein[rust]'
+# Pure Python version (default)
+$ pip install pathvein
 
-# Or with uvx
-$ uvx --with 'pathvein[rust]' pathvein
+# Or with Rust acceleration (if pre-built wheels available)
+$ pip install 'pathvein[rust]'
 
 # Check which backend is active
 $ python -c "from pathvein import get_backend_info; print(get_backend_info())"
 ```
 
-The Rust backend is completely optional - pathvein works perfectly fine as pure Python. The same code works with both backends with no changes required.
+#### Building from Source
 
-**Note**: Building with Rust requires the Rust toolchain (`cargo`). If Rust is not installed, the build will fall back to pure Python automatically.
+```shell
+# Pure Python build (default)
+$ pip install .
+
+# Build with Rust backend (requires Rust toolchain)
+$ pip install maturin
+$ maturin build --release
+$ pip install target/wheels/pathvein-*.whl
+
+# Or use maturin develop for local development
+$ maturin develop --release
+```
+
+**Note**: The default build uses hatchling and produces pure Python packages. To build with Rust, you must explicitly use maturin.
