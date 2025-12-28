@@ -1,6 +1,9 @@
-use globset::{Glob, GlobSet, GlobSetBuilder};
+use globset::{Glob, GlobMatcher, GlobSet, GlobSetBuilder};
+use lru::LruCache;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use std::num::NonZeroUsize;
+use std::sync::Mutex;
 
 /// High-performance glob pattern matcher using Rust's globset
 ///
@@ -103,10 +106,44 @@ impl PatternMatcher {
     }
 }
 
+// Global cache for compiled patterns (matches Python's @lru_cache(maxsize=256))
+static PATTERN_CACHE: Mutex<Option<LruCache<String, GlobMatcher>>> = Mutex::new(None);
+
+/// Get or compile a pattern from the cache
+fn get_or_compile_pattern(pattern: &str) -> PyResult<GlobMatcher> {
+    let mut cache_lock = PATTERN_CACHE.lock().unwrap();
+
+    // Initialize cache on first use
+    if cache_lock.is_none() {
+        *cache_lock = Some(LruCache::new(NonZeroUsize::new(256).unwrap()));
+    }
+
+    let cache = cache_lock.as_mut().unwrap();
+
+    // Check if pattern is in cache
+    if let Some(matcher) = cache.get(pattern) {
+        return Ok(matcher.clone());
+    }
+
+    // Compile and cache the pattern
+    match Glob::new(pattern) {
+        Ok(glob) => {
+            let matcher = glob.compile_matcher();
+            cache.put(pattern.to_string(), matcher.clone());
+            Ok(matcher)
+        }
+        Err(e) => Err(PyValueError::new_err(format!(
+            "Invalid glob pattern '{}': {}",
+            pattern, e
+        ))),
+    }
+}
+
 /// Match a single path against a single pattern (convenience function)
 ///
-/// This is less efficient than creating a PatternMatcher if you need to
-/// match many paths, but convenient for one-off matches.
+/// Uses an LRU cache (maxsize=256) to avoid recompiling patterns, matching
+/// Python's behavior. For the best performance with many matches, use
+/// PatternMatcher which pre-compiles all patterns once.
 ///
 /// Args:
 ///     path: File or directory name to match
@@ -116,11 +153,6 @@ impl PatternMatcher {
 ///     True if path matches pattern, False otherwise
 #[pyfunction]
 pub fn match_pattern(path: &str, pattern: &str) -> PyResult<bool> {
-    match Glob::new(pattern) {
-        Ok(glob) => Ok(glob.compile_matcher().is_match(path)),
-        Err(e) => Err(PyValueError::new_err(format!(
-            "Invalid glob pattern '{}': {}",
-            pattern, e
-        ))),
-    }
+    let matcher = get_or_compile_pattern(pattern)?;
+    Ok(matcher.is_match(path))
 }
