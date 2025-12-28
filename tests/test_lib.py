@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import List
 
-from hypothesis import assume, given
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from hypothesis_fspaths import fspaths
 from upath import UPath
@@ -99,6 +99,7 @@ def test_scan_is_idempotent(pattern: FileStructurePattern):
 
 
 @given(pattern_base_strategy(), pattern_base_strategy())
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
 def test_scan_multiple_patterns_union(
     pattern1: FileStructurePattern, pattern2: FileStructurePattern
 ):
