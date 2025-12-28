@@ -25,16 +25,18 @@ def extract_benchmarks(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extract benchmark results from pytest-benchmark JSON."""
     benchmarks = []
     for bench in data.get("benchmarks", []):
-        benchmarks.append({
-            "name": bench["name"],
-            "fullname": bench["fullname"],
-            "mean": bench["stats"]["mean"],
-            "stddev": bench["stats"]["stddev"],
-            "median": bench["stats"]["median"],
-            "min": bench["stats"]["min"],
-            "max": bench["stats"]["max"],
-            "rounds": bench["stats"]["rounds"],
-        })
+        benchmarks.append(
+            {
+                "name": bench["name"],
+                "fullname": bench["fullname"],
+                "mean": bench["stats"]["mean"],
+                "stddev": bench["stats"]["stddev"],
+                "median": bench["stats"]["median"],
+                "min": bench["stats"]["min"],
+                "max": bench["stats"]["max"],
+                "rounds": bench["stats"]["rounds"],
+            }
+        )
     return benchmarks
 
 
@@ -93,24 +95,26 @@ def generate_markdown_comparison(rust_data: Dict, python_data: Dict) -> str:
     max_speedup = max(speedups)
     min_speedup = min(speedups)
 
-    lines.extend([
-        "",
-        "## Statistics",
-        "",
-        f"- **Average Speedup**: {avg_speedup:.2f}x",
-        f"- **Maximum Speedup**: {max_speedup:.2f}x",
-        f"- **Minimum Speedup**: {min_speedup:.2f}x",
-        "",
-        "### Legend",
-        "",
-        "- 🚀 Significant speedup (≥2.0x)",
-        "- ⚡ Moderate speedup (≥1.2x)",
-        "- ➖ Comparable performance (0.8-1.2x)",
-        "- 🐌 Python faster (unusual, may indicate caching)",
-        "",
-        "## Details by Category",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Statistics",
+            "",
+            f"- **Average Speedup**: {avg_speedup:.2f}x",
+            f"- **Maximum Speedup**: {max_speedup:.2f}x",
+            f"- **Minimum Speedup**: {min_speedup:.2f}x",
+            "",
+            "### Legend",
+            "",
+            "- 🚀 Significant speedup (≥2.0x)",
+            "- ⚡ Moderate speedup (≥1.2x)",
+            "- ➖ Comparable performance (0.8-1.2x)",
+            "- 🐌 Python faster (unusual, may indicate caching)",
+            "",
+            "## Details by Category",
+            "",
+        ]
+    )
 
     # Group by category
     categories = {
@@ -140,26 +144,32 @@ def generate_markdown_comparison(rust_data: Dict, python_data: Dict) -> str:
         if not items:
             continue
 
-        lines.extend([
-            f"### {category}",
-            "",
-        ])
+        lines.extend(
+            [
+                f"### {category}",
+                "",
+            ]
+        )
 
         for name, rust, python, speedup in items:
             display_name = name.replace("test_", "").replace("_", " ")
-            lines.extend([
-                f"**{display_name}**",
-                f"- Python: {python['mean']*1000:.3f}ms ± {python['stddev']*1000:.3f}ms",
-                f"- Rust: {rust['mean']*1000:.3f}ms ± {rust['stddev']*1000:.3f}ms",
-                f"- Speedup: **{speedup:.2f}x**",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"**{display_name}**",
+                    f"- Python: {python['mean']*1000:.3f}ms ± {python['stddev']*1000:.3f}ms",
+                    f"- Rust: {rust['mean']*1000:.3f}ms ± {rust['stddev']*1000:.3f}ms",
+                    f"- Speedup: **{speedup:.2f}x**",
+                    "",
+                ]
+            )
 
-    lines.extend([
-        "---",
-        "",
-        "*Benchmarks run with pytest-benchmark. Lower is better.*",
-    ])
+    lines.extend(
+        [
+            "---",
+            "",
+            "*Benchmarks run with pytest-benchmark. Lower is better.*",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -189,13 +199,15 @@ def generate_text_comparison(rust_data: Dict, python_data: Dict) -> str:
 
         display_name = name.replace("test_", "").replace("_", " ")
 
-        lines.extend([
-            f"{display_name}:",
-            f"  Python: {python['mean']*1000:.3f}ms ± {python['stddev']*1000:.3f}ms",
-            f"  Rust:   {rust['mean']*1000:.3f}ms ± {rust['stddev']*1000:.3f}ms",
-            f"  Speedup: {speedup:.2f}x",
-            "",
-        ])
+        lines.extend(
+            [
+                f"{display_name}:",
+                f"  Python: {python['mean']*1000:.3f}ms ± {python['stddev']*1000:.3f}ms",
+                f"  Rust:   {rust['mean']*1000:.3f}ms ± {rust['stddev']*1000:.3f}ms",
+                f"  Speedup: {speedup:.2f}x",
+                "",
+            ]
+        )
 
     lines.append("=" * 80)
     return "\n".join(lines)

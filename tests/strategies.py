@@ -25,7 +25,9 @@ def valid_name_strategy(
         ),
         min_size=min_size,
         max_size=max_size,
-    ).filter(lambda s: s.strip())  # No whitespace-only names
+    ).filter(
+        lambda s: s.strip()
+    )  # No whitespace-only names
 
 
 @st.composite

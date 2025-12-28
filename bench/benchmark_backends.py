@@ -23,7 +23,12 @@ from typing import Dict, List, Any
 
 # Import pathvein
 try:
-    from pathvein._backend import get_backend_info, walk_parallel, PatternMatcher, match_pattern
+    from pathvein._backend import (
+        get_backend_info,
+        walk_parallel,
+        PatternMatcher,
+        match_pattern,
+    )
     from pathvein._path_utils import pattern_match
 except ImportError as e:
     print(f"Error importing pathvein: {e}")
@@ -38,15 +43,21 @@ class BenchmarkResults:
         self.backend_info = get_backend_info()
         self.results: List[Dict[str, Any]] = []
 
-    def add_result(self, operation: str, scenario: str, duration: float,
-                   items_processed: int = 0, **kwargs):
+    def add_result(
+        self,
+        operation: str,
+        scenario: str,
+        duration: float,
+        items_processed: int = 0,
+        **kwargs,
+    ):
         """Add a benchmark result."""
         result = {
             "operation": operation,
             "scenario": scenario,
             "duration_seconds": duration,
             "items_processed": items_processed,
-            **kwargs
+            **kwargs,
         }
         if items_processed > 0:
             result["items_per_second"] = items_processed / duration
@@ -84,9 +95,18 @@ class BenchmarkResults:
                     print(f"  ({rate:10.0f} items/s)", end="")
 
                 # Print any extra info
-                extra = {k: v for k, v in r.items()
-                        if k not in ["operation", "scenario", "duration_seconds",
-                                    "items_processed", "items_per_second"]}
+                extra = {
+                    k: v
+                    for k, v in r.items()
+                    if k
+                    not in [
+                        "operation",
+                        "scenario",
+                        "duration_seconds",
+                        "items_processed",
+                        "items_per_second",
+                    ]
+                }
                 if extra:
                     print(f"  {extra}", end="")
                 print()
@@ -98,15 +118,16 @@ class BenchmarkResults:
         data = {
             "backend_info": self.backend_info,
             "python_version": sys.version,
-            "results": self.results
+            "results": self.results,
         }
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(data, f, indent=2)
         print(f"\nResults saved to: {filepath}")
 
 
 def create_test_tree(root: Path, depth: int, files_per_dir: int, dirs_per_level: int):
     """Create a test directory tree."""
+
     def create_level(parent: Path, current_depth: int):
         if current_depth > depth:
             return
@@ -139,8 +160,9 @@ def benchmark_directory_walking(results: BenchmarkResults, test_root: Path):
     entries = list(walk_parallel(str(small_tree)))
     duration = time.time() - start
     total_items = sum(len(files) + len(dirs) for _, dirs, files in entries)
-    results.add_result("Directory Walking", "Small tree (2 levels, ~100 files)",
-                      duration, total_items)
+    results.add_result(
+        "Directory Walking", "Small tree (2 levels, ~100 files)", duration, total_items
+    )
 
     # Medium tree
     medium_tree = test_root / "medium"
@@ -150,8 +172,12 @@ def benchmark_directory_walking(results: BenchmarkResults, test_root: Path):
     entries = list(walk_parallel(str(medium_tree)))
     duration = time.time() - start
     total_items = sum(len(files) + len(dirs) for _, dirs, files in entries)
-    results.add_result("Directory Walking", "Medium tree (3 levels, ~1000 files)",
-                      duration, total_items)
+    results.add_result(
+        "Directory Walking",
+        "Medium tree (3 levels, ~1000 files)",
+        duration,
+        total_items,
+    )
 
     # Large tree
     large_tree = test_root / "large"
@@ -161,8 +187,12 @@ def benchmark_directory_walking(results: BenchmarkResults, test_root: Path):
     entries = list(walk_parallel(str(large_tree)))
     duration = time.time() - start
     total_items = sum(len(files) + len(dirs) for _, dirs, files in entries)
-    results.add_result("Directory Walking", "Large tree (4 levels, ~10000 files)",
-                      duration, total_items)
+    results.add_result(
+        "Directory Walking",
+        "Large tree (4 levels, ~10000 files)",
+        duration,
+        total_items,
+    )
 
 
 def benchmark_pattern_matching(results: BenchmarkResults, test_root: Path):
@@ -188,16 +218,26 @@ def benchmark_pattern_matching(results: BenchmarkResults, test_root: Path):
     start = time.time()
     matches = [f for f in filenames if pattern_match(f, pattern)]
     duration = time.time() - start
-    results.add_result("Pattern Matching", "Single pattern, simple (*.py)",
-                      duration, len(matches), total_files=len(filenames))
+    results.add_result(
+        "Pattern Matching",
+        "Single pattern, simple (*.py)",
+        duration,
+        len(matches),
+        total_files=len(filenames),
+    )
 
     # Single pattern matching - complex (using PatternMatcher)
     pattern = "test_*.py"
     start = time.time()
     matches = [f for f in filenames if match_pattern(f, pattern)]
     duration = time.time() - start
-    results.add_result("Pattern Matching", "Single pattern, complex (test_*.py)",
-                      duration, len(matches), total_files=len(filenames))
+    results.add_result(
+        "Pattern Matching",
+        "Single pattern, complex (test_*.py)",
+        duration,
+        len(matches),
+        total_files=len(filenames),
+    )
 
     # Multiple patterns - few
     patterns = ["*.py", "*.rs", "*.md"]
@@ -205,18 +245,31 @@ def benchmark_pattern_matching(results: BenchmarkResults, test_root: Path):
     start = time.time()
     matches = [f for f in filenames if matcher.matches(f)]
     duration = time.time() - start
-    results.add_result("Pattern Matching", "Multiple patterns, 3 patterns",
-                      duration, len(matches), total_files=len(filenames))
+    results.add_result(
+        "Pattern Matching",
+        "Multiple patterns, 3 patterns",
+        duration,
+        len(matches),
+        total_files=len(filenames),
+    )
 
     # Multiple patterns - many
-    patterns = [f"{prefix}_*.{ext}" for prefix in ["test", "main", "lib"]
-                for ext in ["py", "rs", "md", "txt"]]
+    patterns = [
+        f"{prefix}_*.{ext}"
+        for prefix in ["test", "main", "lib"]
+        for ext in ["py", "rs", "md", "txt"]
+    ]
     matcher = PatternMatcher(patterns)
     start = time.time()
     matches = [f for f in filenames if matcher.matches(f)]
     duration = time.time() - start
-    results.add_result("Pattern Matching", f"Multiple patterns, {len(patterns)} patterns",
-                      duration, len(matches), total_files=len(filenames))
+    results.add_result(
+        "Pattern Matching",
+        f"Multiple patterns, {len(patterns)} patterns",
+        duration,
+        len(matches),
+        total_files=len(filenames),
+    )
 
     # Repeated matching (tests cache effectiveness)
     pattern = "*.py"
@@ -224,8 +277,12 @@ def benchmark_pattern_matching(results: BenchmarkResults, test_root: Path):
     for _ in range(100):
         matches = [f for f in filenames if pattern_match(f, pattern)]
     duration = time.time() - start
-    results.add_result("Pattern Matching", "Repeated matching (100x, cache test)",
-                      duration, len(matches) * 100)
+    results.add_result(
+        "Pattern Matching",
+        "Repeated matching (100x, cache test)",
+        duration,
+        len(matches) * 100,
+    )
 
 
 def benchmark_scan_operations(results: BenchmarkResults, test_root: Path):
@@ -242,8 +299,9 @@ def benchmark_scan_operations(results: BenchmarkResults, test_root: Path):
     for dirpath, dirnames, filenames in walk_parallel(str(small_tree)):
         files.extend([f for f in filenames if matcher.matches(f)])
     duration = time.time() - start
-    results.add_result("End-to-End Scan", "Small tree, 2 patterns",
-                      duration, len(files))
+    results.add_result(
+        "End-to-End Scan", "Small tree, 2 patterns", duration, len(files)
+    )
 
     # Medium scan
     medium_tree = test_root / "medium"
@@ -255,8 +313,9 @@ def benchmark_scan_operations(results: BenchmarkResults, test_root: Path):
     for dirpath, dirnames, filenames in walk_parallel(str(medium_tree)):
         files.extend([f for f in filenames if matcher.matches(f)])
     duration = time.time() - start
-    results.add_result("End-to-End Scan", "Medium tree, 3 patterns",
-                      duration, len(files))
+    results.add_result(
+        "End-to-End Scan", "Medium tree, 3 patterns", duration, len(files)
+    )
 
     # Large scan
     large_tree = test_root / "large"
@@ -268,8 +327,9 @@ def benchmark_scan_operations(results: BenchmarkResults, test_root: Path):
     for dirpath, dirnames, filenames in walk_parallel(str(large_tree)):
         files.extend([f for f in filenames if matcher.matches(f)])
     duration = time.time() - start
-    results.add_result("End-to-End Scan", "Large tree, 5 patterns",
-                      duration, len(files))
+    results.add_result(
+        "End-to-End Scan", "Large tree, 5 patterns", duration, len(files)
+    )
 
     # Complex pattern scan
     patterns = ["test_*.py", "lib_*.rs", "*.md"]
@@ -280,8 +340,9 @@ def benchmark_scan_operations(results: BenchmarkResults, test_root: Path):
     for dirpath, dirnames, filenames in walk_parallel(str(large_tree)):
         files.extend([f for f in filenames if matcher.matches(f)])
     duration = time.time() - start
-    results.add_result("End-to-End Scan", "Large tree, complex patterns",
-                      duration, len(files))
+    results.add_result(
+        "End-to-End Scan", "Large tree, complex patterns", duration, len(files)
+    )
 
 
 def benchmark_real_world(results: BenchmarkResults):
@@ -297,8 +358,9 @@ def benchmark_real_world(results: BenchmarkResults):
     for dirpath, dirnames, filenames in walk_parallel(str(repo_root)):
         files.extend([f for f in filenames if matcher.matches(f)])
     duration = time.time() - start
-    results.add_result("Real Repository", "Scan Python files (*.py)",
-                      duration, len(files))
+    results.add_result(
+        "Real Repository", "Scan Python files (*.py)", duration, len(files)
+    )
 
     # Scan Rust files
     matcher = PatternMatcher(["*.rs"])
@@ -307,8 +369,9 @@ def benchmark_real_world(results: BenchmarkResults):
     for dirpath, dirnames, filenames in walk_parallel(str(repo_root)):
         files.extend([f for f in filenames if matcher.matches(f)])
     duration = time.time() - start
-    results.add_result("Real Repository", "Scan Rust files (*.rs)",
-                      duration, len(files))
+    results.add_result(
+        "Real Repository", "Scan Rust files (*.rs)", duration, len(files)
+    )
 
     # Scan all source files
     matcher = PatternMatcher(["*.py", "*.rs", "*.toml", "*.md"])
@@ -317,8 +380,7 @@ def benchmark_real_world(results: BenchmarkResults):
     for dirpath, dirnames, filenames in walk_parallel(str(repo_root)):
         files.extend([f for f in filenames if matcher.matches(f)])
     duration = time.time() - start
-    results.add_result("Real Repository", "Scan all source files",
-                      duration, len(files))
+    results.add_result("Real Repository", "Scan all source files", duration, len(files))
 
     # Scan Python excluding tests (simple filter)
     matcher = PatternMatcher(["*.py"])
@@ -329,11 +391,13 @@ def benchmark_real_world(results: BenchmarkResults):
         # Exclude tests directory
         if "tests" in dirpath or ".venv" in dirpath:
             continue
-        files.extend([f for f in filenames
-                     if matcher.matches(f) and not test_matcher.matches(f)])
+        files.extend(
+            [f for f in filenames if matcher.matches(f) and not test_matcher.matches(f)]
+        )
     duration = time.time() - start
-    results.add_result("Real Repository", "Scan Python excluding tests",
-                      duration, len(files))
+    results.add_result(
+        "Real Repository", "Scan Python excluding tests", duration, len(files)
+    )
 
 
 def compare_results(python_json: str, rust_json: str):
@@ -352,20 +416,20 @@ def compare_results(python_json: str, rust_json: str):
 
     # Create lookup for rust results
     rust_lookup = {}
-    for r in rust_data['results']:
-        key = (r['operation'], r['scenario'])
+    for r in rust_data["results"]:
+        key = (r["operation"], r["scenario"])
         rust_lookup[key] = r
 
     # Compare each python result
-    for py_result in python_data['results']:
-        key = (py_result['operation'], py_result['scenario'])
+    for py_result in python_data["results"]:
+        key = (py_result["operation"], py_result["scenario"])
         rust_result = rust_lookup.get(key)
 
         if not rust_result:
             continue
 
-        py_time = py_result['duration_seconds']
-        rust_time = rust_result['duration_seconds']
+        py_time = py_result["duration_seconds"]
+        rust_time = rust_result["duration_seconds"]
         speedup = py_time / rust_time
 
         print(f"\n{py_result['operation']} - {py_result['scenario']}")
@@ -405,14 +469,18 @@ Setup for comparison:
 
   4. Compare results:
      python benchmark_backends.py --compare python_results.json rust_results.json
-        """
+        """,
     )
-    parser.add_argument("-o", "--output",
-                       help="Output JSON file for results")
-    parser.add_argument("--compare", nargs=2, metavar=("FILE1", "FILE2"),
-                       help="Compare two benchmark result JSON files")
-    parser.add_argument("--skip-real", action="store_true",
-                       help="Skip real repository benchmarks")
+    parser.add_argument("-o", "--output", help="Output JSON file for results")
+    parser.add_argument(
+        "--compare",
+        nargs=2,
+        metavar=("FILE1", "FILE2"),
+        help="Compare two benchmark result JSON files",
+    )
+    parser.add_argument(
+        "--skip-real", action="store_true", help="Skip real repository benchmarks"
+    )
 
     args = parser.parse_args()
 
@@ -455,7 +523,7 @@ Setup for comparison:
         results.save_json(args.output)
     else:
         # Auto-generate filename based on backend
-        backend_name = "rust" if backend_info['has_rust'] else "python"
+        backend_name = "rust" if backend_info["has_rust"] else "python"
         filename = f"benchmark_results_{backend_name}.json"
         results.save_json(filename)
 

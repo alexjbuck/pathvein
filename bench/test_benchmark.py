@@ -29,7 +29,12 @@ from pathlib import Path
 
 import pytest
 
-from pathvein._backend import PatternMatcher, get_backend_info, match_pattern, walk_parallel
+from pathvein._backend import (
+    PatternMatcher,
+    get_backend_info,
+    match_pattern,
+    walk_parallel,
+)
 from pathvein._path_utils import pattern_match
 
 
@@ -94,7 +99,9 @@ class TestDirectoryWalking:
 
     def test_walk_with_max_depth(self, benchmark, temp_dir_structure):
         """Benchmark directory walking with max_depth=2."""
-        result = benchmark(lambda: list(walk_parallel(str(temp_dir_structure), max_depth=2)))
+        result = benchmark(
+            lambda: list(walk_parallel(str(temp_dir_structure), max_depth=2))
+        )
         assert len(result) > 0
 
 
@@ -105,13 +112,17 @@ class TestPatternMatching:
     def test_single_pattern_simple(self, benchmark, test_filenames):
         """Benchmark single simple pattern (*.py)."""
         pattern = "*.py"
-        result = benchmark(lambda: [f for f in test_filenames if pattern_match(f, pattern)])
+        result = benchmark(
+            lambda: [f for f in test_filenames if pattern_match(f, pattern)]
+        )
         assert len(result) > 0
 
     def test_single_pattern_match_pattern(self, benchmark, test_filenames):
         """Benchmark single pattern using match_pattern."""
         pattern = "test_*.py"
-        result = benchmark(lambda: [f for f in test_filenames if match_pattern(f, pattern)])
+        result = benchmark(
+            lambda: [f for f in test_filenames if match_pattern(f, pattern)]
+        )
         assert len(result) > 0
 
     def test_multiple_patterns_3(self, benchmark, test_filenames):
@@ -189,7 +200,9 @@ class TestComparison:
         if get_backend_info()["backend"] == "rust":
             # Rust: Use PatternMatcher (should be faster)
             matcher = PatternMatcher(patterns)
-            result = benchmark(lambda: [f for f in test_filenames if matcher.matches(f)])
+            result = benchmark(
+                lambda: [f for f in test_filenames if matcher.matches(f)]
+            )
         else:
             # Python: Use individual checks (might be comparable due to caching)
             result = benchmark(
