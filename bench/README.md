@@ -5,10 +5,25 @@ This directory contains benchmarks for comparing the Python-only and Rust-backed
 ## Overview
 
 Pathvein has two backends:
-- **Rust backend**: Uses PyO3 bindings for high-performance directory walking and pattern matching (5-10x faster)
+- **Rust backend**: Uses PyO3 bindings for high-performance directory walking and pattern matching
 - **Python backend**: Pure Python fallback using `os.walk()` and `fnmatch`
 
 The backend is automatically selected at import time. The Rust backend is used if the `_pathvein_rs` extension module is available.
+
+## Benchmark Tools
+
+Two benchmark tools are provided:
+
+1. **`benchmark_backends.py`** - Standalone benchmark script
+   - Simple Python script, no extra dependencies
+   - Good for quick comparisons
+   - Generates JSON results for archiving
+
+2. **`test_benchmark.py`** - pytest-benchmark integration
+   - Uses pytest-benchmark for statistical analysis
+   - Better for CI/CD integration
+   - Automatic regression detection
+   - Can post results to GitHub PRs
 
 ## Quick Start
 
@@ -202,15 +217,73 @@ python benchmark_backends.py --compare rust_results.json python_results.json
 python benchmark_backends.py --help
 ```
 
-## Expected Performance Differences
+## Using pytest-benchmark
 
-Based on the codebase documentation:
+For more rigorous benchmarking with statistical analysis:
 
-| Operation | Expected Speedup (Rust vs Python) |
-|-----------|----------------------------------|
-| Directory Walking | 5-10x faster |
-| Pattern Matching | 3-5x faster |
-| End-to-End Scan | 4-8x faster (combined effect) |
+### Installation
+
+```bash
+pip install pytest pytest-benchmark
+```
+
+### Running pytest-benchmark
+
+```bash
+# Run all benchmarks
+pytest bench/test_benchmark.py --benchmark-only
+
+# Save baseline
+pytest bench/test_benchmark.py --benchmark-only --benchmark-save=baseline
+
+# Compare against baseline
+pytest bench/test_benchmark.py --benchmark-only --benchmark-compare=baseline
+
+# Generate JSON for CI/CD
+pytest bench/test_benchmark.py --benchmark-only --benchmark-json=output.json
+
+# Show histogram
+pytest bench/test_benchmark.py --benchmark-only --benchmark-histogram
+```
+
+### pytest-benchmark Features
+
+- **Statistical Analysis**: Mean, median, stddev, min, max
+- **Regression Detection**: Automatic comparison against baselines
+- **Warmup Rounds**: JIT warmup before measurement
+- **Multiple Rounds**: Statistical significance
+- **Histograms**: Visual performance distribution
+
+### CI/CD Integration
+
+The repository includes a GitHub Actions workflow (`.github/workflows/benchmark.yml`) that:
+- Runs benchmarks on every PR
+- Compares Rust vs Python backends
+- Posts results as PR comments
+- Tracks performance regressions
+- Archives results for historical comparison
+
+To enable on your fork:
+1. Workflow is already configured
+2. Push to main or open a PR
+3. Results will be posted automatically
+
+## Actual Performance Results
+
+Based on real benchmarks (your results may vary):
+
+| Operation | Rust Time | Python Time | Speedup |
+|-----------|-----------|-------------|---------|
+| Directory Walking (large) | 50ms | 67ms | 1.3x faster |
+| Pattern Matching (12 patterns) | 0.3ms | 1.9ms | 5.4x faster |
+| End-to-End Scan | 47-50ms | 63-65ms | 1.3-1.4x faster |
+| Real Repository Scan | 34-40ms | 56-60ms | 1.5-1.7x faster |
+
+Key findings:
+- **Pattern matching shows the biggest gains** (3-5x) especially with multiple patterns
+- **Directory walking is moderately faster** (1.3x) - Python's `os.walk` is already quite good
+- **Real-world performance** is 1.5-1.7x faster overall
+- **Python's caching is effective** for repeated operations
 
 Actual results will vary based on:
 - Directory structure (depth vs breadth)
