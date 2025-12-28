@@ -46,10 +46,9 @@ jobs:
           # Install dependencies manually
           pip install pydantic typing-extensions
           # Copy Python source without compiling Rust
-          mkdir -p $PYTHONPATH/pathvein
-          cp -r src/pathvein/* $(python -c "import site; print(site.getsitepackages()[0])")/pathvein/
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+          SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+          mkdir -p "$SITE_PACKAGES/pathvein"
+          cp -r src/pathvein/* "$SITE_PACKAGES/pathvein/"
 
       - name: Verify backend
         run: |

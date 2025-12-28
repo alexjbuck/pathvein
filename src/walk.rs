@@ -74,17 +74,15 @@ pub fn walk_parallel(
             let mut dirnames: SmallVec<[String; 8]> = SmallVec::new();
 
             if let Ok(read_dir) = std::fs::read_dir(dir_path) {
-                for entry_result in read_dir {
-                    if let Ok(child_entry) = entry_result {
-                        if let Ok(name) = child_entry.file_name().into_string() {
-                            // Use file_type() which is cached from readdir() on Linux
-                            // metadata() would require an additional stat() syscall
-                            if let Ok(file_type) = child_entry.file_type() {
-                                if file_type.is_file() {
-                                    filenames.push(name);
-                                } else if file_type.is_dir() {
-                                    dirnames.push(name);
-                                }
+                for child_entry in read_dir.flatten() {
+                    if let Ok(name) = child_entry.file_name().into_string() {
+                        // Use file_type() which is cached from readdir() on Linux
+                        // metadata() would require an additional stat() syscall
+                        if let Ok(file_type) = child_entry.file_type() {
+                            if file_type.is_file() {
+                                filenames.push(name);
+                            } else if file_type.is_dir() {
+                                dirnames.push(name);
                             }
                         }
                     }
