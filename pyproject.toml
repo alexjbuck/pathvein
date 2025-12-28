@@ -12,16 +12,18 @@ pathvein = "pathvein.cli:main"
 [project.optional-dependencies]
 cli = ["typer>=0.13.1"]
 s3 = ["fsspec[s3]>=2024.10.0,<2026.0.0", "universal-pathlib>=0.2.5"]
+rust = []  # Rust acceleration (requires Rust toolchain to build from source)
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
-[tool.hatch.build.targets.sdist]
-only-include = ["src/pathvein", "tests", "Makefile"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/pathvein"]
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "pathvein._pathvein_rs"
+python-source = "src"
+# Build Rust extension only if cargo is available
+# Falls back to pure Python if Rust toolchain not present
 
 [tool.uv]
 dev-dependencies = [

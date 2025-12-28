@@ -3,10 +3,17 @@ dist/
 __pycache__
 .hypothesis
 .coverage
-/.yarn/**    
+/.yarn/**
 /.yarn/releases/*
 /.yarn/plugins/**/*
 /.pnp.*
 node_modules
 .venv
 .DS_Store
+
+# Rust build artifacts
+/target/
+Cargo.lock
+*.so
+*.pyd
+*.dylib

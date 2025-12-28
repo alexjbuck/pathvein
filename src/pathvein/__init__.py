@@ -15,6 +15,7 @@ from pathvein.lib import assess as assess
 from pathvein.lib import ShuffleInput as ShuffleInput
 from pathvein.lib import ShuffleResult as ShuffleResult
 from pathvein.lib import ScanResult as ScanResult
+from pathvein._backend import get_backend_info as get_backend_info
 
 __all__ = [
     "FileStructurePattern",
@@ -26,4 +27,5 @@ __all__ = [
     "ShuffleInput",
     "ShuffleResult",
     "ScanResult",
+    "get_backend_info",
 ]
