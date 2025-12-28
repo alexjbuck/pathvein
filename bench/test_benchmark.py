@@ -119,7 +119,7 @@ class TestPatternMatching:
 
     def test_single_pattern_match_pattern(self, benchmark, test_filenames):
         """Benchmark single pattern using match_pattern."""
-        pattern = "test_*.py"
+        pattern = "test_*.txt"  # Changed to match actual files (test_0.txt, test_24.txt, etc.)
         result = benchmark(
             lambda: [f for f in test_filenames if match_pattern(f, pattern)]
         )
