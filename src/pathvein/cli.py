@@ -7,7 +7,9 @@ finding matches and 'shuffle' for reorganizing files.
 """
 
 import logging
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import List
 
@@ -97,11 +99,17 @@ def main():
         )
         sys.exit(1)
 
+    # Configure log file path (cross-platform and configurable)
+    log_file = os.getenv(
+        "PATHVEIN_LOG_FILE",
+        os.path.join(tempfile.gettempdir(), "pathvein.log")
+    )
+
     logging.basicConfig(
         level=logging.NOTSET,
         format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
         datefmt="%m-%d %H:%M",
-        handlers=[logging.FileHandler("/tmp/organizer.log"), logging.StreamHandler()],
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
     )
     cli()
 
