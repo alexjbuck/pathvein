@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import List
 
-from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis_fspaths import fspaths
 from upath import UPath
@@ -19,7 +19,10 @@ from pathvein.lib import (
 )
 from pathvein.pattern import FileStructurePattern
 from tests import isolated_memory_filesystem
-from tests.strategies import pattern_base_strategy, pattern_strategy
+from tests.strategies import (
+    pattern_strategy,
+    valid_pattern_base_strategy,
+)
 
 
 @given(fspaths(), fspaths(), pattern_strategy())
@@ -45,15 +48,9 @@ def test_tuples(source: Path, dest: Path, pattern: FileStructurePattern):
     assert shuffle_result.pattern == pattern
 
 
-@given(pattern_base_strategy())
+@given(valid_pattern_base_strategy())
 def test_scan_results_actually_match_pattern(pattern: FileStructurePattern):
     """Property: All scan results should match their reported pattern."""
-    # Skip patterns without valid directory names
-    assume(pattern.directory_name is not None)
-    assume(len(pattern.directory_name) > 0)
-    assume("/" not in pattern.directory_name)
-    assume("\\" not in pattern.directory_name)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
@@ -64,8 +61,7 @@ def test_scan_results_actually_match_pattern(pattern: FileStructurePattern):
 
         # Create all required files
         for filename in pattern.files:
-            if filename and "/" not in filename and "\\" not in filename:
-                (match_dir / filename).touch()
+            (match_dir / filename).touch()
 
         # Scan for the pattern
         results = scan(root, [pattern])
@@ -77,13 +73,9 @@ def test_scan_results_actually_match_pattern(pattern: FileStructurePattern):
             assert result.pattern == pattern
 
 
-@given(pattern_base_strategy())
+@given(valid_pattern_base_strategy())
 def test_scan_is_idempotent(pattern: FileStructurePattern):
     """Property: Scanning the same directory twice should return identical results."""
-    assume(pattern.directory_name is not None)
-    assume(len(pattern.directory_name) > 0)
-    assume("/" not in pattern.directory_name)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
@@ -98,18 +90,11 @@ def test_scan_is_idempotent(pattern: FileStructurePattern):
         assert results1 == results2
 
 
-@given(pattern_base_strategy(), pattern_base_strategy())
-@settings(suppress_health_check=[HealthCheck.filter_too_much])
+@given(valid_pattern_base_strategy(), valid_pattern_base_strategy())
 def test_scan_multiple_patterns_union(
     pattern1: FileStructurePattern, pattern2: FileStructurePattern
 ):
     """Property: scan(path, [p1, p2]) == scan(path, [p1]) ∪ scan(path, [p2])"""
-    # Skip invalid patterns
-    assume(pattern1.directory_name is not None and len(pattern1.directory_name) > 0)
-    assume(pattern2.directory_name is not None and len(pattern2.directory_name) > 0)
-    assume("/" not in pattern1.directory_name and "\\" not in pattern1.directory_name)
-    assume("/" not in pattern2.directory_name and "\\" not in pattern2.directory_name)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
@@ -126,17 +111,12 @@ def test_scan_multiple_patterns_union(
         assert combined_results == union_results
 
 
-@given(pattern_base_strategy(), st.text(min_size=1, max_size=20))
+@given(
+    valid_pattern_base_strategy(max_list_size=10).filter(lambda p: len(p.files) > 0),
+    st.text(min_size=1, max_size=20),
+)
 def test_shuffle_preserves_file_content(pattern: FileStructurePattern, content: str):
     """Property: After shuffle, file content should be preserved."""
-    assume(pattern.directory_name is not None and len(pattern.directory_name) > 0)
-    assume("/" not in pattern.directory_name and "\\" not in pattern.directory_name)
-    assume(len(pattern.files) > 0)
-
-    # Pick a valid filename from pattern
-    valid_files = [f for f in pattern.files if f and "/" not in f and "\\" not in f]
-    assume(len(valid_files) > 0)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
@@ -144,34 +124,30 @@ def test_shuffle_preserves_file_content(pattern: FileStructurePattern, content: 
         # Create source directory with file
         source_dir = root / "source_dir"
         source_dir.mkdir()
-        test_file = source_dir / valid_files[0]
+        test_file = source_dir / pattern.files[0]
         test_file.write_text(content)
 
         # Create additional required files
         for filename in pattern.files:
-            if filename and "/" not in filename and "\\" not in filename:
-                (source_dir / filename).touch()
+            (source_dir / filename).touch()
 
         dest_root = root / "dest"
 
         # Shuffle the directory
-        scan_results = scan(root / "source_dir".replace("/", ""), [pattern])
+        scan_results = scan(root / "source_dir", [pattern])
         if scan_results:
             result = shuffle_to(scan_results, dest_root)
 
             # Property: File content should be identical
             if result:
-                dest_file = dest_root / "source_dir" / valid_files[0]
+                dest_file = dest_root / "source_dir" / pattern.files[0]
                 if dest_file.exists():
                     assert dest_file.read_text() == content
 
 
-@given(pattern_base_strategy())
+@given(valid_pattern_base_strategy())
 def test_shuffle_to_creates_expected_path(pattern: FileStructurePattern):
     """Property: shuffle_to should create destination paths correctly."""
-    assume(pattern.directory_name is not None and len(pattern.directory_name) > 0)
-    assume("/" not in pattern.directory_name and "\\" not in pattern.directory_name)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
@@ -183,8 +159,7 @@ def test_shuffle_to_creates_expected_path(pattern: FileStructurePattern):
 
         # Create required files
         for filename in pattern.files:
-            if filename and "/" not in filename and "\\" not in filename:
-                (source_dir / filename).touch()
+            (source_dir / filename).touch()
 
         dest_root = root / "destination"
 
@@ -199,16 +174,9 @@ def test_shuffle_to_creates_expected_path(pattern: FileStructurePattern):
             assert expected_dest.is_dir()
 
 
-@given(pattern_base_strategy())
+@given(valid_pattern_base_strategy(max_list_size=10).filter(lambda p: len(p.files) > 0))
 def test_assess_finds_scan_matches(pattern: FileStructurePattern):
     """Property: If scan finds a match, assess should find it from files within."""
-    assume(pattern.directory_name is not None and len(pattern.directory_name) > 0)
-    assume("/" not in pattern.directory_name and "\\" not in pattern.directory_name)
-    assume(len(pattern.files) > 0)
-
-    valid_files = [f for f in pattern.files if f and "/" not in f and "\\" not in f]
-    assume(len(valid_files) > 0)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
@@ -218,7 +186,7 @@ def test_assess_finds_scan_matches(pattern: FileStructurePattern):
         match_dir.mkdir()
 
         # Create required files
-        for filename in valid_files:
+        for filename in pattern.files:
             (match_dir / filename).touch()
 
         # First, verify scan finds it
@@ -226,7 +194,7 @@ def test_assess_finds_scan_matches(pattern: FileStructurePattern):
 
         if scan_results:
             # Pick a file from the matched directory
-            test_file = match_dir / valid_files[0]
+            test_file = match_dir / pattern.files[0]
 
             # Property: assess should find the same pattern
             assess_results = list(assess(test_file, [pattern]))
@@ -238,25 +206,14 @@ def test_assess_finds_scan_matches(pattern: FileStructurePattern):
             )  # assess works backwards, might not find all
 
 
-@given(st.lists(pattern_base_strategy(), min_size=1, max_size=3))
+@given(st.lists(valid_pattern_base_strategy(), min_size=1, max_size=3))
 def test_scan_returns_set(patterns: List[FileStructurePattern]):
     """Property: scan always returns a set."""
-    # Filter to valid patterns
-    valid_patterns = [
-        p
-        for p in patterns
-        if p.directory_name
-        and len(p.directory_name) > 0
-        and "/" not in p.directory_name
-        and "\\" not in p.directory_name
-    ]
-    assume(len(valid_patterns) > 0)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
 
-        results = scan(root, valid_patterns)
+        results = scan(root, patterns)
 
         # Property: Result should be a set
         assert isinstance(results, set)
@@ -264,11 +221,9 @@ def test_scan_returns_set(patterns: List[FileStructurePattern]):
         assert all(isinstance(r, ScanResult) for r in results)
 
 
-@given(pattern_base_strategy())
+@given(valid_pattern_base_strategy())
 def test_shuffle_returns_list(pattern: FileStructurePattern):
     """Property: shuffle always returns a list."""
-    assume(pattern.directory_name is not None and len(pattern.directory_name) > 0)
-
     with isolated_memory_filesystem():
         root = UPath("/test", protocol="memory")
         root.mkdir()
