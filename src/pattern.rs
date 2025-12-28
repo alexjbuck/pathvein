@@ -45,7 +45,8 @@ impl PatternMatcher {
         match builder.build() {
             Ok(globset) => Ok(PatternMatcher {
                 globset,
-                patterns: patterns.clone(),
+                // No clone needed - we own the patterns vector
+                patterns,
             }),
             Err(e) => Err(PyValueError::new_err(format!(
                 "Error building pattern matcher: {}",
@@ -88,7 +89,9 @@ impl PatternMatcher {
     /// Returns:
     ///     True if path matches ALL patterns, False otherwise
     pub fn matches_all(&self, path: &str) -> bool {
-        self.patterns.len() == self.matching_patterns(path).len()
+        // Optimized: Count matches without allocating a Vec
+        let match_count = self.globset.matches(path).len();
+        self.patterns.len() == match_count
     }
 
     fn __repr__(&self) -> String {
