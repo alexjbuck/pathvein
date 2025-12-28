@@ -36,3 +36,38 @@ jobs:
         run: yarn check
       - name: Build
         run: yarn build
+
+  build-wheels:
+    name: Build wheels on ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          # Test one platform per OS to verify wheels build correctly
+          - runner: ubuntu-latest
+            os: linux
+            target: x86_64
+          - runner: macos-14
+            os: macos
+            target: aarch64
+          - runner: windows-latest
+            os: windows
+            target: x64
+    steps:
+      - name: Checkout Git repository
+        uses: actions/checkout@v4.1.1
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --interpreter 3.12
+          sccache: 'true'
+          manylinux: auto
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform.os }}-${{ matrix.platform.target }}
+          path: dist
