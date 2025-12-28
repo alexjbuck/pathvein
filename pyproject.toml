@@ -12,7 +12,6 @@ pathvein = "pathvein.cli:main"
 [project.optional-dependencies]
 cli = []  # Kept for backward compatibility, CLI is now always available
 s3 = ["fsspec[s3]>=2024.10.0,<2026.0.0", "universal-pathlib>=0.2.5"]
-rust = []  # Rust acceleration (requires Rust toolchain to build from source)
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
