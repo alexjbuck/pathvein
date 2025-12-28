@@ -95,8 +95,7 @@ results = shuffle(
 
 ## CLI usage
 
-If you install the CLI, it currently implements the `shuffle_to` API with the single destination
-provided in the command line.
+The CLI implements the `shuffle_to` API with a single destination provided in the command line.
 
 This library does not yet have a settled method for dynamically computing the destination folder
 and providing that via commandline interface.
@@ -105,10 +104,12 @@ If you need to use the dynamic destination feature of the library, you should no
 should instead write a script to employ the library `shuffle_with` or `shuffle` features.
 
 ```shell
-# Install using your favorite python package installer (pip or pipx)
-$ pipx install 'pathvein[cli]'
-# or 
-$ uv pip install 'pathvein[cli]'
+# Install using your favorite python package installer
+$ pipx install pathvein
+# or
+$ pip install pathvein
+# or use directly with uvx
+$ uvx pathvein
 
 
 # View the commandline interface help
