@@ -72,7 +72,6 @@ def test_scan_results_actually_match_pattern(pattern: FileStructurePattern):
 
         # Property: All results should actually match their pattern
         for result in results:
-            walk_tuple = (result.source, [], list(result.source.iterdir()))
             # The matched directory should satisfy the pattern
             assert isinstance(result, ScanResult)
             assert result.pattern == pattern
@@ -100,7 +99,9 @@ def test_scan_is_idempotent(pattern: FileStructurePattern):
 
 
 @given(pattern_base_strategy(), pattern_base_strategy())
-def test_scan_multiple_patterns_union(pattern1: FileStructurePattern, pattern2: FileStructurePattern):
+def test_scan_multiple_patterns_union(
+    pattern1: FileStructurePattern, pattern2: FileStructurePattern
+):
     """Property: scan(path, [p1, p2]) == scan(path, [p1]) ∪ scan(path, [p2])"""
     # Skip invalid patterns
     assume(pattern1.directory_name is not None and len(pattern1.directory_name) > 0)
@@ -231,7 +232,9 @@ def test_assess_finds_scan_matches(pattern: FileStructurePattern):
 
             # If scan found it, assess should too (though root might differ)
             # At minimum, assess should find *some* match
-            assert len(assess_results) >= 0  # assess works backwards, might not find all
+            assert (
+                len(assess_results) >= 0
+            )  # assess works backwards, might not find all
 
 
 @given(st.lists(pattern_base_strategy(), min_size=1, max_size=3))
@@ -239,9 +242,12 @@ def test_scan_returns_set(patterns: List[FileStructurePattern]):
     """Property: scan always returns a set."""
     # Filter to valid patterns
     valid_patterns = [
-        p for p in patterns
-        if p.directory_name and len(p.directory_name) > 0
-        and "/" not in p.directory_name and "\\" not in p.directory_name
+        p
+        for p in patterns
+        if p.directory_name
+        and len(p.directory_name) > 0
+        and "/" not in p.directory_name
+        and "\\" not in p.directory_name
     ]
     assume(len(valid_patterns) > 0)
 
