@@ -149,41 +149,24 @@ This library makes use of caching to improve performance. While iterating throug
 This program behaves in a way that causes multiple calls to `path.iterdir()` for each path in the tree. When this involves network requests, the cached function can be several
 orders of magnitude faster. Even for local file system calls (i.e. `path` is a POSIX path) this can be over 100x faster by caching.
 
-### Rust Backend (Optional)
+### Rust Backend
 
-For maximum performance, pathvein can be built with an optional Rust backend that provides:
+For maximum performance, pathvein includes a Rust backend that provides:
 - **5-10x faster** directory walking with parallel traversal
 - **3-5x faster** pattern matching with compiled globs
-- Automatic fallback to pure Python if Rust is not available
+- Automatic fallback to pure Python if Rust extension not available
 
-The Rust backend is completely optional - pathvein works perfectly fine as pure Python. The same code works with both backends with no changes required.
-
-#### Installing from PyPI (when available)
+The Rust backend is built automatically if you have the Rust toolchain installed. If Rust is not available, pathvein falls back to pure Python seamlessly.
 
 ```shell
-# Pure Python version (default)
+# Install from PyPI (when available)
 $ pip install pathvein
 
-# Or with Rust acceleration (if pre-built wheels available)
-$ pip install 'pathvein[rust]'
+# Build from source (builds with Rust if cargo available)
+$ pip install .
 
 # Check which backend is active
 $ python -c "from pathvein import get_backend_info; print(get_backend_info())"
 ```
 
-#### Building from Source
-
-```shell
-# Pure Python build (default)
-$ pip install .
-
-# Build with Rust backend (requires Rust toolchain)
-$ pip install maturin
-$ maturin build --release
-$ pip install target/wheels/pathvein-*.whl
-
-# Or use maturin develop for local development
-$ maturin develop --release
-```
-
-**Note**: The default build uses hatchling and produces pure Python packages. To build with Rust, you must explicitly use maturin.
+**Note**: Requires Rust toolchain (`cargo`) for building from source. If not installed, falls back to pure Python automatically.
