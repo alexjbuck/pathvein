@@ -35,3 +35,4 @@ dev-dependencies = [
 
 [tool.pytest.ini_options]
 addopts = "--cov=pathvein --cov-report html --cov-report term --hypothesis-show-statistics"
+testpaths = ["tests"]  # Exclude bench/ from regular test runs

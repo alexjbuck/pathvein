@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 
-mod walk;
 mod pattern;
+mod walk;
 
 /// High-performance file structure pattern matching with Rust
 #[pymodule]

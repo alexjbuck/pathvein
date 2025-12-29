@@ -76,8 +76,18 @@ class PatternMatcher:
 
         if HAS_RUST_BACKEND and _pathvein_rs is not None:
             # Use Rust backend
-            self._rust_matcher = _pathvein_rs.PatternMatcher(patterns)
-            self._backend = "rust"
+            try:
+                self._rust_matcher = _pathvein_rs.PatternMatcher(patterns)
+                self._backend = "rust"
+            except ValueError as e:
+                # Invalid glob pattern, fall back to Python
+                logger.debug(
+                    "Invalid pattern in %s, falling back to Python: %s", patterns, e
+                )
+                from pathvein._path_utils import compile_pattern
+
+                self._compiled_patterns = [compile_pattern(p) for p in patterns]
+                self._backend = "python"
         else:
             # Fall back to Python
             from pathvein._path_utils import compile_pattern
@@ -131,7 +141,14 @@ def match_pattern(path: str, pattern: str) -> bool:
         True if path matches pattern
     """
     if HAS_RUST_BACKEND and _pathvein_rs is not None:
-        return _pathvein_rs.match_pattern(path, pattern)
+        try:
+            return _pathvein_rs.match_pattern(path, pattern)
+        except ValueError as e:
+            # Invalid glob pattern, fall back to Python
+            logger.debug("Invalid pattern '%s', falling back to Python: %s", pattern, e)
+            from pathvein._path_utils import pattern_match
+
+            return pattern_match(path, pattern)
     else:
         from pathvein._path_utils import pattern_match
 

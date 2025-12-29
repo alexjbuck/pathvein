@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 use rayon::prelude::*;
+use smallvec::SmallVec;
 use walkdir::WalkDir;
 
 /// Directory entry returned from walk
@@ -45,9 +46,7 @@ pub fn walk_parallel(
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<DirEntry>> {
-    let walker = WalkDir::new(&path)
-        .follow_links(follow_links)
-        .min_depth(0);
+    let walker = WalkDir::new(&path).follow_links(follow_links).min_depth(0);
 
     let walker = if let Some(depth) = max_depth {
         walker.max_depth(depth)
@@ -69,19 +68,21 @@ pub fn walk_parallel(
             let dir_path = entry.path();
 
             // Read directory contents
-            let mut filenames = Vec::new();
-            let mut dirnames = Vec::new();
+            // Use SmallVec to avoid heap allocation for small directories
+            // Most directories have <32 files and <8 subdirs, so this is stack-allocated
+            let mut filenames: SmallVec<[String; 32]> = SmallVec::new();
+            let mut dirnames: SmallVec<[String; 8]> = SmallVec::new();
 
             if let Ok(read_dir) = std::fs::read_dir(dir_path) {
-                for entry_result in read_dir {
-                    if let Ok(child_entry) = entry_result {
-                        if let Ok(name) = child_entry.file_name().into_string() {
-                            if let Ok(file_type) = child_entry.file_type() {
-                                if file_type.is_file() {
-                                    filenames.push(name);
-                                } else if file_type.is_dir() {
-                                    dirnames.push(name);
-                                }
+                for child_entry in read_dir.flatten() {
+                    if let Ok(name) = child_entry.file_name().into_string() {
+                        // Use file_type() which is cached from readdir() on Linux
+                        // metadata() would require an additional stat() syscall
+                        if let Ok(file_type) = child_entry.file_type() {
+                            if file_type.is_file() {
+                                filenames.push(name);
+                            } else if file_type.is_dir() {
+                                dirnames.push(name);
                             }
                         }
                     }
@@ -89,9 +90,11 @@ pub fn walk_parallel(
             }
 
             Some(DirEntry {
-                path: dir_path.to_string_lossy().to_string(),
-                dirnames,
-                filenames,
+                // Use into_owned() instead of to_string() to avoid double allocation
+                path: dir_path.to_string_lossy().into_owned(),
+                // Convert SmallVec to Vec for PyO3 compatibility
+                dirnames: dirnames.into_vec(),
+                filenames: filenames.into_vec(),
             })
         })
         .collect();

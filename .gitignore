@@ -17,3 +17,6 @@ Cargo.lock
 *.so
 *.pyd
 *.dylib
+
+# Benchmark results
+bench/*_results.json

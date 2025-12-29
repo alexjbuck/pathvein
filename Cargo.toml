@@ -13,8 +13,17 @@ pyo3 = { version = "0.23", features = ["extension-module", "abi3-py38"] }
 walkdir = "2.5"
 globset = "0.4"
 rayon = "1.10"
+smallvec = "1.13"
+lru = "0.12"
 
 [profile.release]
 lto = true
 codegen-units = 1
 strip = true
+opt-level = 3
+
+# NOTE: target-cpu is NOT set here intentionally
+# - Distributed wheels need to work on any CPU (baseline x86_64)
+# - Users building from source can enable with:
+#   RUSTFLAGS="-C target-cpu=native" pip install --no-binary pathvein pathvein
+# - This enables AVX2/AVX-512 and other CPU-specific optimizations

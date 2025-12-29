@@ -1,0 +1,128 @@
+{
+  "backend_info": {
+    "has_rust": false,
+    "backend": "python",
+    "features": [
+      null,
+      null
+    ]
+  },
+  "python_version": "3.11.14 (main, Oct 10 2025, 08:54:04) [GCC 13.3.0]",
+  "results": [
+    {
+      "operation": "Directory Walking",
+      "scenario": "Small tree (2 levels, ~100 files)",
+      "duration_seconds": 0.0010449886322021484,
+      "items_processed": 43,
+      "items_per_second": 41148.7729865389
+    },
+    {
+      "operation": "Directory Walking",
+      "scenario": "Medium tree (3 levels, ~1000 files)",
+      "duration_seconds": 0.006818294525146484,
+      "items_processed": 440,
+      "items_per_second": 64532.266592069376
+    },
+    {
+      "operation": "Directory Walking",
+      "scenario": "Large tree (4 levels, ~10000 files)",
+      "duration_seconds": 0.06131458282470703,
+      "items_processed": 4055,
+      "items_per_second": 66134.34868492682
+    },
+    {
+      "operation": "Pattern Matching",
+      "scenario": "Single pattern, simple (*.py)",
+      "duration_seconds": 0.00044727325439453125,
+      "items_processed": 125,
+      "total_files": 1000,
+      "items_per_second": 279471.21535181237
+    },
+    {
+      "operation": "Pattern Matching",
+      "scenario": "Single pattern, complex (test_*.py)",
+      "duration_seconds": 0.0010433197021484375,
+      "items_processed": 0,
+      "total_files": 1000
+    },
+    {
+      "operation": "Pattern Matching",
+      "scenario": "Multiple patterns, 3 patterns",
+      "duration_seconds": 0.0008752346038818359,
+      "items_processed": 375,
+      "total_files": 1000,
+      "items_per_second": 428456.5513484064
+    },
+    {
+      "operation": "Pattern Matching",
+      "scenario": "Multiple patterns, 12 patterns",
+      "duration_seconds": 0.0019652843475341797,
+      "items_processed": 250,
+      "total_files": 1000,
+      "items_per_second": 127208.05531966517
+    },
+    {
+      "operation": "Pattern Matching",
+      "scenario": "Repeated matching (100x, cache test)",
+      "duration_seconds": 0.02651500701904297,
+      "items_processed": 12500,
+      "items_per_second": 471431.14052440383
+    },
+    {
+      "operation": "End-to-End Scan",
+      "scenario": "Small tree, 2 patterns",
+      "duration_seconds": 0.0012941360473632812,
+      "items_processed": 16,
+      "items_per_second": 12363.460574797347
+    },
+    {
+      "operation": "End-to-End Scan",
+      "scenario": "Medium tree, 3 patterns",
+      "duration_seconds": 0.007837057113647461,
+      "items_processed": 252,
+      "items_per_second": 32154.9270785799
+    },
+    {
+      "operation": "End-to-End Scan",
+      "scenario": "Large tree, 5 patterns",
+      "duration_seconds": 0.06466531753540039,
+      "items_processed": 3900,
+      "items_per_second": 60310.5366004734
+    },
+    {
+      "operation": "End-to-End Scan",
+      "scenario": "Large tree, complex patterns",
+      "duration_seconds": 0.0620427131652832,
+      "items_processed": 780,
+      "items_per_second": 12571.984044638122
+    },
+    {
+      "operation": "Real Repository",
+      "scenario": "Scan Python files (*.py)",
+      "duration_seconds": 0.06141161918640137,
+      "items_processed": 17,
+      "items_per_second": 276.8205793174133
+    },
+    {
+      "operation": "Real Repository",
+      "scenario": "Scan Rust files (*.rs)",
+      "duration_seconds": 0.05496025085449219,
+      "items_processed": 4,
+      "items_per_second": 72.77987159465556
+    },
+    {
+      "operation": "Real Repository",
+      "scenario": "Scan all source files",
+      "duration_seconds": 0.0571286678314209,
+      "items_processed": 34,
+      "items_per_second": 595.1477829017382
+    },
+    {
+      "operation": "Real Repository",
+      "scenario": "Scan Python excluding tests",
+      "duration_seconds": 0.05562233924865723,
+      "items_processed": 10,
+      "items_per_second": 179.7838806328414
+    }
+  ]
+}
