@@ -262,10 +262,10 @@ class FileStructurePattern:
             # If all input filenames do not match a pattern, then its a missed pattern, and not a match
             # The failing case is when no files match a pattern, aka all files do not match.
             #
-            # NOTE(Performance): match_pattern uses Rust backend with LRU cache for fast matching
-            # This means its beneficial to reuse the same pattern multiple times in a row, so it is preferred
-            # to first iterate over the patterns, and then iterate over the filenames instead of the other way around.
-            if _none_of(match_pattern(filename, pattern) for filename in filenames):
+            # NOTE(Performance): Use PatternMatcher to avoid FFI overhead on each filename check
+            # PatternMatcher compiles the pattern once and keeps it in Rust, avoiding repeated FFI calls
+            matcher = PatternMatcher([pattern])
+            if _none_of(matcher.matches(filename) for filename in filenames):
                 logger.debug(
                     "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
                     lpad,
