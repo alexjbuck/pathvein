@@ -17,7 +17,8 @@ from concurrent.futures import ThreadPoolExecutor, Future, wait
 
 from typing_extensions import Self
 
-from ._path_utils import iterdir, stream_copy, pattern_match
+from ._path_utils import iterdir, stream_copy
+from ._backend import match_pattern, PatternMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +248,7 @@ class FileStructurePattern:
         logger.debug("%s Evaluating match for %s against %s", lpad, dirpath, self)
 
         # Short circuit check for directory name pattern match
-        if self.directory_name and not pattern_match(dirpath.name, self.directory_name):
+        if self.directory_name and not match_pattern(dirpath.name, self.directory_name):
             logger.debug(
                 "%s x Failed match on directory name: Expected: %s, Found: %s",
                 lpad,
@@ -261,10 +262,10 @@ class FileStructurePattern:
             # If all input filenames do not match a pattern, then its a missed pattern, and not a match
             # The failing case is when no files match a pattern, aka all files do not match.
             #
-            # NOTE(Performance): pattern_match caches compiled regex patterns via lru_cache
+            # NOTE(Performance): match_pattern uses Rust backend with LRU cache for fast matching
             # This means its beneficial to reuse the same pattern multiple times in a row, so it is preferred
             # to first iterate over the patterns, and then iterate over the filenames instead of the other way around.
-            if _none_of(pattern_match(filename, pattern) for filename in filenames):
+            if _none_of(match_pattern(filename, pattern) for filename in filenames):
                 logger.debug(
                     "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
                     lpad,
@@ -343,13 +344,15 @@ class FileStructurePattern:
             destination.mkdir(parents=True, exist_ok=overwrite)
         # Copy all files in this top level that match a required or optional file pattern
         _, directories, files = iterdir(source)
+        # Use PatternMatcher for efficient multi-pattern matching
+        file_matcher = PatternMatcher(self.all_files) if self.all_files else None
         for file in files:
             path = source / file
             logger.debug(
                 "Checking file against patterns",
                 extra={"file": file, "pattern": self.all_files},
             )
-            if any(pattern_match(path.name, pattern) for pattern in self.all_files):
+            if file_matcher and file_matcher.matches(path.name):
                 logger.debug("Found match")
                 if not dryrun:
                     logger.debug("Beginning copy")
@@ -430,6 +433,8 @@ class FileStructurePattern:
                     dest.mkdir(parents=True, exist_ok=overwrite)
                 # Copy all files in this top level that match a required or optional file pattern
                 _, directories, files = iterdir(src)
+                # Use PatternMatcher for efficient multi-pattern matching
+                file_matcher = PatternMatcher(pattern.all_files) if pattern.all_files else None
                 logger.debug(
                     "Beginning copy operation",
                     extra={
@@ -445,10 +450,7 @@ class FileStructurePattern:
                         "Checking file against patterns",
                         extra={"file": path.name, "pattern": pattern.all_files},
                     )
-                    if any(
-                        pattern_match(path.name, file_pattern)
-                        for file_pattern in pattern.all_files
-                    ):
+                    if file_matcher and file_matcher.matches(path.name):
                         logger.debug("Found match")
                         if not dryrun:
                             target = dest / path.name

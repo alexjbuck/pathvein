@@ -11,7 +11,8 @@ import logging
 from pathlib import Path
 from typing import Callable, Generator, Iterable, List, NamedTuple, Set
 
-from ._path_utils import iterdir, walk
+from ._path_utils import iterdir
+from ._backend import walk_parallel
 from .pattern import FileStructurePattern
 
 logger = logging.getLogger(__name__)
@@ -113,7 +114,9 @@ def scan(
 
     matches = set()
 
-    for dirpath, dirnames, filenames in walk(source):
+    # Use Rust-backed walk_parallel for better performance
+    for dirpath_str, dirnames, filenames in walk_parallel(str(source)):
+        dirpath = Path(dirpath_str)
         logger.debug("Walk: (%s, %s, %s)", dirpath, dirnames, filenames)
         for pattern in pattern_list:
             if pattern.matches((dirpath, dirnames, filenames)):
