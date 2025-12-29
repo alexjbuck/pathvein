@@ -106,12 +106,40 @@ jobs:
             const fs = require('fs');
             const comparison = fs.readFileSync('comparison.md', 'utf8');
 
-            github.rest.issues.createComment({
+            // Add unique marker to identify our benchmark comment
+            const marker = '<!-- benchmark-results -->';
+            const body = marker + '\n' + comparison;
+
+            // Find existing benchmark comment
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comparison
             });
+
+            const existingComment = comments.find(comment =>
+              comment.body.includes(marker)
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                comment_id: existingComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+              console.log('Updated existing benchmark comment:', existingComment.id);
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+              console.log('Created new benchmark comment');
+            }
 
       - name: Store baseline (main branch only)
         if: github.ref == 'refs/heads/main'
