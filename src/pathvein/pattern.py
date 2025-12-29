@@ -264,16 +264,29 @@ class FileStructurePattern:
             #
             # NOTE(Performance): Use PatternMatcher to avoid FFI overhead on each filename check
             # PatternMatcher compiles the pattern once and keeps it in Rust, avoiding repeated FFI calls
-            matcher = PatternMatcher([pattern])
-            if _none_of(matcher.matches(filename) for filename in filenames):
-                logger.debug(
-                    "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
-                    lpad,
-                    pattern,
-                    filenames,
-                    dirpath,
-                )
-                return False
+            try:
+                matcher = PatternMatcher([pattern])
+                if _none_of(matcher.matches(filename) for filename in filenames):
+                    logger.debug(
+                        "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
+                        lpad,
+                        pattern,
+                        filenames,
+                        dirpath,
+                    )
+                    return False
+            except (ValueError, Exception) as e:
+                # Invalid glob pattern, fallback to match_pattern with error handling
+                logger.debug("Invalid pattern '%s': %s, using fallback", pattern, e)
+                if _none_of(match_pattern(filename, pattern) for filename in filenames):
+                    logger.debug(
+                        "%s x Failed match on required file pattern. Required %s, Found: %s, Directory: %s",
+                        lpad,
+                        pattern,
+                        filenames,
+                        dirpath,
+                    )
+                    return False
 
         # NOTE: This could be written as a double nested list comprehension that includes the
         # self.directories iterations as well, but its rather confusing to read, leaving that
