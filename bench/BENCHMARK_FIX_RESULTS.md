@@ -105,13 +105,38 @@ With `PatternMatcher`, we:
 4. ✅ Use GlobSet DFA which is highly optimized
 5. ✅ Amortize FFI overhead across all patterns
 
+## Additional Optimization: scan_single_pattern
+
+After the LRU cache fix, we identified another performance issue in the `test_scan_single_pattern` benchmark. It was using `match_pattern` in a loop:
+
+```python
+# ANTI-PATTERN: FFI overhead on each call
+for dirpath, dirnames, filenames in walk_parallel(str(temp_dir_structure)):
+    files.extend([f for f in filenames if match_pattern(f, pattern)])
+```
+
+This causes FFI overhead for every file! The fix is to use `PatternMatcher`:
+
+```python
+# OPTIMIZED: Compile once, keep in Rust
+matcher = PatternMatcher([pattern])
+for dirpath, dirnames, filenames in walk_parallel(str(temp_dir_structure)):
+    files.extend([f for f in filenames if matcher.matches(f)])
+```
+
+**Results:**
+- Anti-pattern (match_pattern loop): 288ms
+- Optimized (PatternMatcher): 228ms
+- **1.26x faster (21% improvement)** ✅
+
 ## Recommendations
 
 For best performance:
 
-- ✅ **Use `PatternMatcher`** when matching multiple patterns or making many matches with the same pattern(s)
-- ⚠️ **Use `match_pattern`** only for one-off single pattern checks
-- ✅ The LRU cache ensures `match_pattern` is now reasonable (4x slower, not 13x)
+- ✅ **ALWAYS use `PatternMatcher`** for repeated pattern matching (loops, scans, etc.)
+- ⚠️ **Use `match_pattern`** ONLY for one-off single pattern checks
+- ❌ **NEVER use `match_pattern` in a loop** - this causes excessive FFI overhead
+- ✅ The LRU cache ensures `match_pattern` is now reasonable for one-off checks (4x slower vs Python, not 13x)
 
 ## Benchmark Summary Table
 
