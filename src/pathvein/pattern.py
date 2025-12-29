@@ -434,7 +434,9 @@ class FileStructurePattern:
                 # Copy all files in this top level that match a required or optional file pattern
                 _, directories, files = iterdir(src)
                 # Use PatternMatcher for efficient multi-pattern matching
-                file_matcher = PatternMatcher(pattern.all_files) if pattern.all_files else None
+                file_matcher = (
+                    PatternMatcher(pattern.all_files) if pattern.all_files else None
+                )
                 logger.debug(
                     "Beginning copy operation",
                     extra={
