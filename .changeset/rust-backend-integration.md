@@ -27,6 +27,6 @@ Integrate Rust backend into core library for real-world performance gains
 - Internal implementation migrated from `_path_utils.pattern_match()` to `_backend.match_pattern()`
 
 **Developer Experience:**
-- Added pre-commit hook for automatic lint checking
 - Comprehensive benchmark suite with Python/Rust comparison
 - Updated benchmarks to reflect actual library usage patterns
+- Benchmark workflow now updates existing PR comments instead of spamming new ones
