@@ -23,8 +23,10 @@ Integrate Rust backend into core library for real-world performance gains
 **API Compatibility:**
 - Automatic fallback to pure Python when Rust backend unavailable
 - No breaking API changes - all public interfaces remain the same
-- Internal implementation migrated from `_path_utils.walk()` to `_backend.walk_parallel()`
-- Internal implementation migrated from `_path_utils.pattern_match()` to `_backend.match_pattern()`
+- **Cloud storage support preserved** - detects path type and uses appropriate walker:
+  - Local `Path` objects → Rust `walk_parallel()` for performance
+  - Cloud/UPath objects (S3, Azure, GCS) → Python `walk()` for compatibility
+- Internal pattern matching migrated to `_backend.match_pattern()` and `PatternMatcher`
 
 **Developer Experience:**
 - Comprehensive benchmark suite with Python/Rust comparison
