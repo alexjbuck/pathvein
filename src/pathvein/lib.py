@@ -13,6 +13,7 @@ from typing import Callable, Generator, Iterable, List, NamedTuple, Set
 
 from ._path_utils import iterdir
 from ._backend import walk_parallel
+from ._path_utils import walk as walk_python
 from .pattern import FileStructurePattern
 
 logger = logging.getLogger(__name__)
@@ -114,14 +115,26 @@ def scan(
 
     matches = set()
 
-    # Use Rust-backed walk_parallel for better performance
-    for dirpath_str, dirnames, filenames in walk_parallel(str(source)):
-        dirpath = Path(dirpath_str)
-        logger.debug("Walk: (%s, %s, %s)", dirpath, dirnames, filenames)
-        for pattern in pattern_list:
-            if pattern.matches((dirpath, dirnames, filenames)):
-                logger.debug("Matched structure %s in %s", pattern, dirpath)
-                matches.add(ScanResult(dirpath, pattern))
+    # Use Rust-backed walk_parallel ONLY for standard Path objects (local filesystem)
+    # For cloud storage (UPath, S3Path, etc.), use Python walk() which supports any path-like object
+    if type(source) is Path:
+        # Local filesystem - use Rust for performance
+        for dirpath_str, dirnames, filenames in walk_parallel(str(source)):
+            dirpath = Path(dirpath_str)
+            logger.debug("Walk: (%s, %s, %s)", dirpath, dirnames, filenames)
+            for pattern in pattern_list:
+                if pattern.matches((dirpath, dirnames, filenames)):
+                    logger.debug("Matched structure %s in %s", pattern, dirpath)
+                    matches.add(ScanResult(dirpath, pattern))
+    else:
+        # Cloud storage or other path-like objects - use Python walk()
+        logger.debug("Using Python walk for non-local path: %s", type(source))
+        for dirpath, dirnames, filenames in walk_python(source):
+            logger.debug("Walk: (%s, %s, %s)", dirpath, dirnames, filenames)
+            for pattern in pattern_list:
+                if pattern.matches((dirpath, dirnames, filenames)):
+                    logger.debug("Matched structure %s in %s", pattern, dirpath)
+                    matches.add(ScanResult(dirpath, pattern))
 
     logger.debug("Matching paths: %s", matches)
 
