@@ -176,7 +176,31 @@ class TestEndToEnd:
         assert len(result) > 0
 
     def test_scan_single_pattern(self, benchmark, temp_dir_structure):
-        """Benchmark scanning directory with single pattern."""
+        """Benchmark scanning directory with single pattern using PatternMatcher.
+
+        Note: Uses PatternMatcher instead of match_pattern for efficiency.
+        PatternMatcher compiles patterns once and keeps them in Rust,
+        avoiding FFI overhead on each match.
+        """
+        pattern = "*.py"
+        matcher = PatternMatcher([pattern])
+
+        def scan():
+            files = []
+            for dirpath, dirnames, filenames in walk_parallel(str(temp_dir_structure)):
+                files.extend([f for f in filenames if matcher.matches(f)])
+            return files
+
+        result = benchmark(scan)
+        assert len(result) > 0
+
+    def test_scan_single_pattern_antipattern(self, benchmark, temp_dir_structure):
+        """Benchmark scan using match_pattern in a loop (ANTI-PATTERN).
+
+        This demonstrates why you should NOT use match_pattern repeatedly.
+        Each call crosses the Python/Rust FFI boundary, causing overhead.
+        Use PatternMatcher instead (see test_scan_single_pattern).
+        """
         pattern = "*.py"
 
         def scan():
