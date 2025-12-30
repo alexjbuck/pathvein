@@ -2,10 +2,13 @@ use dashmap::DashMap;
 use ignore::WalkBuilder;
 use pyo3::prelude::*;
 use smallvec::SmallVec;
+use std::ffi::OsString;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Type alias for directory contents: (filenames, dirnames)
-type DirContents = (SmallVec<[String; 32]>, SmallVec<[String; 8]>);
+/// Uses OsString to avoid UTF-8 conversion overhead during parallel collection
+type DirContents = (SmallVec<[OsString; 32]>, SmallVec<[OsString; 8]>);
 
 /// Directory entry returned from walk
 #[pyclass]
@@ -65,7 +68,8 @@ pub fn walk_parallel(
     builder.git_exclude(false); // Don't use .git/info/exclude
 
     // Collect all entries grouped by directory (using DashMap for lock-free concurrency)
-    let dir_contents: Arc<DashMap<String, DirContents>> = Arc::new(DashMap::new());
+    // Use PathBuf as key to avoid String allocation during walk
+    let dir_contents: Arc<DashMap<PathBuf, DirContents>> = Arc::new(DashMap::new());
 
     // Walk in parallel
     builder.build_parallel().run(|| {
@@ -74,26 +78,20 @@ pub fn walk_parallel(
             if let Ok(dir_entry) = entry_result {
                 let path = dir_entry.path();
 
-                // Get parent directory
-                if let Some(parent) = path.parent() {
-                    let parent_str = parent.to_string_lossy().to_string();
-                    let name = path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .map(|s| s.to_string());
+                // Get parent directory and filename - no string allocation!
+                if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
+                    if let Some(file_type) = dir_entry.file_type() {
+                        // DashMap handles locking internally with sharding - no explicit lock needed
+                        // to_path_buf() only allocates the PathBuf, not a String
+                        let mut entry = dir_contents
+                            .entry(parent.to_path_buf())
+                            .or_insert((SmallVec::new(), SmallVec::new()));
 
-                    if let Some(name) = name {
-                        if let Some(file_type) = dir_entry.file_type() {
-                            // DashMap handles locking internally with sharding - no explicit lock needed
-                            let mut entry = dir_contents
-                                .entry(parent_str)
-                                .or_insert((SmallVec::new(), SmallVec::new()));
-
-                            if file_type.is_file() {
-                                entry.0.push(name);
-                            } else if file_type.is_dir() {
-                                entry.1.push(name);
-                            }
+                        // Use OsString - no UTF-8 validation needed during walk
+                        if file_type.is_file() {
+                            entry.0.push(name.to_os_string());
+                        } else if file_type.is_dir() {
+                            entry.1.push(name.to_os_string());
                         }
                     }
                 }
@@ -102,15 +100,23 @@ pub fn walk_parallel(
         })
     });
 
-    // Convert to DirEntry format
+    // Convert to DirEntry format - only convert to UTF-8 String here at the end
     let results: Vec<DirEntry> = dir_contents
         .iter()
         .map(|entry| {
             let (path, (files, dirs)) = entry.pair();
             DirEntry {
-                path: path.clone(),
-                filenames: files.to_vec(),
-                dirnames: dirs.to_vec(),
+                // Convert PathBuf -> String only once per directory
+                path: path.to_string_lossy().into_owned(),
+                // Convert OsString -> String only once per filename
+                filenames: files
+                    .iter()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .collect(),
+                dirnames: dirs
+                    .iter()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .collect(),
             }
         })
         .collect();
