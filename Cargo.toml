@@ -15,6 +15,8 @@ globset = "0.4"
 smallvec = "1.13"
 lru = "0.12"
 dashmap = "6.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [profile.release]
 lto = true

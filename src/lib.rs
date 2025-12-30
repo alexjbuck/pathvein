@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod file_pattern;
 mod pattern;
 mod walk;
 

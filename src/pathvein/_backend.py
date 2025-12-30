@@ -63,10 +63,9 @@ def scan_parallel(
     """
     Scan directory tree for pattern matches in Rust.
 
-    This is a streaming implementation that walks AND matches in Rust,
-    avoiding the overhead of returning all data to Python and then
-    matching it. Instead, we walk in Rust, call back to Python pattern
-    matchers, and return only matches.
+    This is a streaming implementation that walks AND matches entirely in Rust,
+    with NO FFI crossings during the scan loop. Patterns are serialized to JSON
+    and matching happens entirely in Rust.
 
     Args:
         path: Root directory to scan
@@ -80,8 +79,13 @@ def scan_parallel(
     if HAS_RUST_BACKEND and _pathvein_rs is not None:
         from pathlib import Path as PathType
 
-        # Use Rust backend - walk and match in one pass
-        results = _pathvein_rs.scan_parallel(path, patterns, max_depth, follow_links)
+        # Serialize patterns to JSON for Rust
+        pattern_jsons = [p.to_json() for p in patterns]
+
+        # Walk and match entirely in Rust - no FFI crossings in loop
+        results = _pathvein_rs.scan_parallel(
+            path, pattern_jsons, max_depth, follow_links
+        )
         # Convert results back to (Path, pattern) tuples
         return [(PathType(r.path), patterns[r.pattern_index]) for r in results]
     else:

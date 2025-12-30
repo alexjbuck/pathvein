@@ -156,53 +156,61 @@ impl ScanResult {
     }
 }
 
-/// Scan directory tree for pattern matches - walk AND match in Rust
+/// Scan directory tree for pattern matches - walk AND match entirely in Rust
 ///
 /// This replaces the Python scan() function's walk+match loop with a single
-/// Rust call that does everything internally without crossing FFI boundaries
-/// repeatedly.
-///
-/// The matching is done by calling back to Python pattern matchers, but we only
-/// call back once per directory that has matching files, not for every file.
+/// Rust call that does everything internally with NO FFI crossings during the
+/// scan loop.
 ///
 /// Args:
 ///     path: Root directory to scan
-///     py_pattern_matchers: List of Python callables that take (dirpath, dirnames, filenames) and return bool
+///     pattern_jsons: List of JSON-serialized FileStructurePattern objects
 ///     max_depth: Optional maximum depth to traverse
 ///     follow_links: Whether to follow symbolic links
 ///
 /// Returns:
 ///     List of ScanResult tuples (path, pattern_index) for directories that matched
 #[pyfunction]
-#[pyo3(signature = (path, py_pattern_matchers, max_depth=None, follow_links=false))]
+#[pyo3(signature = (path, pattern_jsons, max_depth=None, follow_links=false))]
 pub fn scan_parallel(
-    py: Python,
     path: String,
-    py_pattern_matchers: Vec<PyObject>,
+    pattern_jsons: Vec<String>,
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<ScanResult>> {
-    // First, walk and collect all directories
+    use crate::file_pattern::FileStructurePattern;
+
+    // Deserialize patterns from JSON
+    let patterns: Vec<FileStructurePattern> = pattern_jsons
+        .iter()
+        .map(|json| {
+            FileStructurePattern::from_json(json).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid pattern JSON: {}",
+                    e
+                ))
+            })
+        })
+        .collect::<PyResult<Vec<_>>>()?;
+
+    // Walk the directory tree
     let entries = walk_parallel(path, max_depth, follow_links)?;
 
-    // Now match each directory against patterns
+    // Match each directory against patterns - ALL IN RUST
     let mut results = Vec::new();
 
     for entry in entries {
-        let dirpath = entry.path;
-        let dirnames = entry.dirnames;
-        let filenames = entry.filenames;
+        let dirpath_name = std::path::Path::new(&entry.path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
 
         // Try each pattern
-        for (pattern_idx, matcher) in py_pattern_matchers.iter().enumerate() {
-            // Call Python matcher: matcher.matches((dirpath, dirnames, filenames))
-            let match_args = (&dirpath, &dirnames, &filenames);
-            let result = matcher.call_method1(py, "matches", (match_args,))?;
-            let matches: bool = result.extract(py)?;
-
-            if matches {
+        for (pattern_idx, pattern) in patterns.iter().enumerate() {
+            // Match entirely in Rust - no FFI crossing!
+            if pattern.matches(dirpath_name, &entry.dirnames, &entry.filenames) {
                 results.push(ScanResult {
-                    path: dirpath.clone(),
+                    path: entry.path.clone(),
                     pattern_index: pattern_idx,
                 });
             }
