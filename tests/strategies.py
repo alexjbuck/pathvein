@@ -16,6 +16,7 @@ def valid_name_strategy(
     - No forward or backward slashes
     - Non-empty (by default)
     - Printable ASCII characters
+    - Not special directory names (., ..)
     """
     return st.text(
         alphabet=st.characters(
@@ -25,7 +26,9 @@ def valid_name_strategy(
         ),
         min_size=min_size,
         max_size=max_size,
-    ).filter(lambda s: s.strip())  # No whitespace-only names
+    ).filter(
+        lambda s: s.strip() and s not in (".", "..")
+    )  # No whitespace-only names or special dirs
 
 
 @st.composite

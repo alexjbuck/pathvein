@@ -12,89 +12,89 @@
     {
       "operation": "Directory Walking",
       "scenario": "Small tree (2 levels, ~100 files)",
-      "duration_seconds": 0.005507230758666992,
+      "duration_seconds": 0.0060465335845947266,
       "items_processed": 44,
-      "items_per_second": 7989.49634183298
+      "items_per_second": 7276.896652340208
     },
     {
       "operation": "Directory Walking",
       "scenario": "Medium tree (3 levels, ~1000 files)",
-      "duration_seconds": 0.005157947540283203,
+      "duration_seconds": 0.0049207210540771484,
       "items_processed": 441,
-      "items_per_second": 85499.1247111029
+      "items_per_second": 89621.01187073017
     },
     {
       "operation": "Directory Walking",
       "scenario": "Large tree (4 levels, ~10000 files)",
-      "duration_seconds": 0.022957563400268555,
+      "duration_seconds": 0.02255558967590332,
       "items_processed": 4056,
-      "items_per_second": 176673.80153908464
+      "items_per_second": 179822.38807674014
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Single pattern, simple (*.py)",
-      "duration_seconds": 0.0004124641418457031,
+      "duration_seconds": 0.0004329681396484375,
       "items_processed": 125,
       "total_files": 1000,
-      "items_per_second": 303056.64739884395
+      "items_per_second": 288704.84581497795
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Single pattern, complex (test_*.py)",
-      "duration_seconds": 0.0048007965087890625,
+      "duration_seconds": 0.004574298858642578,
       "items_processed": 0,
       "total_files": 1000
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Multiple patterns, 3 patterns",
-      "duration_seconds": 0.00037932395935058594,
+      "duration_seconds": 0.00022721290588378906,
       "items_processed": 375,
       "total_files": 1000,
-      "items_per_second": 988600.8799497172
+      "items_per_second": 1650434.4176285414
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Multiple patterns, 12 patterns",
-      "duration_seconds": 0.0004260540008544922,
+      "duration_seconds": 0.0003478527069091797,
       "items_processed": 250,
       "total_files": 1000,
-      "items_per_second": 586780.0783435926
+      "items_per_second": 718694.9965729952
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Repeated matching (100x, cache test)",
-      "duration_seconds": 0.027075529098510742,
+      "duration_seconds": 0.029470205307006836,
       "items_processed": 12500,
-      "items_per_second": 461671.4951172477
+      "items_per_second": 424157.2079251175
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Small tree, 2 patterns",
-      "duration_seconds": 0.004025697708129883,
+      "duration_seconds": 0.005055427551269531,
       "items_processed": 16,
-      "items_per_second": 3974.4663310630735
+      "items_per_second": 3164.9152990001885
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Medium tree, 3 patterns",
-      "duration_seconds": 0.006859302520751953,
+      "duration_seconds": 0.005771636962890625,
       "items_processed": 252,
-      "items_per_second": 36738.429197080295
+      "items_per_second": 43661.7898215466
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Large tree, 5 patterns",
-      "duration_seconds": 0.02326226234436035,
+      "duration_seconds": 0.022788047790527344,
       "items_processed": 3900,
-      "items_per_second": 167653.5128985641
+      "items_per_second": 171142.34777150032
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Large tree, complex patterns",
-      "duration_seconds": 0.014436483383178711,
+      "duration_seconds": 0.011610031127929688,
       "items_processed": 780,
-      "items_per_second": 54029.77853379796
+      "items_per_second": 67183.28240512568
     }
   ]
 }

@@ -10,11 +10,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.23", features = ["extension-module", "abi3-py38"] }
-walkdir = "2.5"
+ignore = "0.4"
 globset = "0.4"
-rayon = "1.10"
 smallvec = "1.13"
 lru = "0.12"
+dashmap = "6.1"
 
 [profile.release]
 lto = true
