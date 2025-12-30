@@ -34,86 +34,10 @@ impl DirEntry {
     }
 }
 
-/// Sequential directory walking - fast for small directories
-///
-/// Uses a simple sequential walk without parallel overhead. Best for small directories
-/// (< 1000 entries) where parallel setup overhead dominates actual work.
-///
-/// Args:
-///     path: Root directory to walk
-///     max_depth: Optional maximum depth to traverse (None = unlimited)
-///     follow_links: Whether to follow symbolic links (default: false)
-///
-/// Returns:
-///     List of DirEntry objects, each containing (path, dirnames, filenames)
-fn walk_sequential_impl(
-    path: String,
-    max_depth: Option<usize>,
-    follow_links: bool,
-) -> PyResult<Vec<DirEntry>> {
-    use std::collections::HashMap;
-
-    let mut builder = WalkBuilder::new(&path);
-
-    if let Some(depth) = max_depth {
-        builder.max_depth(Some(depth));
-    }
-
-    builder.follow_links(follow_links);
-    builder.hidden(false);
-    builder.ignore(false);
-    builder.git_ignore(false);
-    builder.git_global(false);
-    builder.git_exclude(false);
-
-    // Use simple HashMap for sequential walk
-    let mut dir_contents: HashMap<PathBuf, DirContents> = HashMap::new();
-
-    // Sequential walk - no parallel overhead
-    for dir_entry in builder.build().flatten() {
-        let path = dir_entry.path();
-
-        if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
-            if let Some(file_type) = dir_entry.file_type() {
-                let entry = dir_contents
-                    .entry(parent.to_path_buf())
-                    .or_insert((SmallVec::new(), SmallVec::new()));
-
-                if file_type.is_file() {
-                    entry.0.push(name.to_os_string());
-                } else if file_type.is_dir() {
-                    entry.1.push(name.to_os_string());
-                }
-            }
-        }
-    }
-
-    // Convert to DirEntry format
-    let results: Vec<DirEntry> = dir_contents
-        .into_iter()
-        .map(|(path, (files, dirs))| DirEntry {
-            path: path.to_string_lossy().into_owned(),
-            filenames: files
-                .iter()
-                .map(|s| s.to_string_lossy().into_owned())
-                .collect(),
-            dirnames: dirs
-                .iter()
-                .map(|s| s.to_string_lossy().into_owned())
-                .collect(),
-        })
-        .collect();
-
-    Ok(results)
-}
-
 /// Parallel directory walking using ignore crate (same as ripgrep)
 ///
 /// Uses the ignore crate's WalkParallel for efficient parallel directory
 /// traversal. This is the same approach used by ripgrep for fast searching.
-///
-/// For small directories (<1000 expected entries), automatically falls back
-/// to sequential walk to avoid parallel overhead.
 ///
 /// Args:
 ///     path: Root directory to walk
@@ -129,15 +53,6 @@ pub fn walk_parallel(
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<DirEntry>> {
-    // Automatically choose sequential vs parallel based on max_depth
-    // For very shallow trees (depth 1-2), sequential avoids ~2ms parallel overhead
-    // For deeper/unknown depth, use parallel (optimized for large trees)
-    //
-    // Note: For small flat directories, Python's os.walk may be faster due to FFI overhead.
-    // This implementation is optimized for large directory trees with parallelization.
-    if matches!(max_depth, Some(1) | Some(2)) {
-        return walk_sequential_impl(path, max_depth, follow_links);
-    }
 
     // Build parallel walker (same as ripgrep uses)
     let mut builder = WalkBuilder::new(&path);
@@ -208,3 +123,90 @@ pub fn walk_parallel(
 
     Ok(results)
 }
+
+/// Scan result - a directory that matched a pattern
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct ScanResult {
+    #[pyo3(get)]
+    pub path: String,
+    #[pyo3(get)]
+    pub pattern_index: usize,
+}
+
+#[pymethods]
+impl ScanResult {
+    fn __repr__(&self) -> String {
+        format!("ScanResult(path='{}', pattern_index={})", self.path, self.pattern_index)
+    }
+
+    fn __hash__(&self) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        self.path.hash(&mut hasher);
+        self.pattern_index.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    fn __eq__(&self, other: &Self) -> bool {
+        self.path == other.path && self.pattern_index == other.pattern_index
+    }
+}
+
+/// Scan directory tree for pattern matches - walk AND match in Rust
+///
+/// This replaces the Python scan() function's walk+match loop with a single
+/// Rust call that does everything internally without crossing FFI boundaries
+/// repeatedly.
+///
+/// The matching is done by calling back to Python pattern matchers, but we only
+/// call back once per directory that has matching files, not for every file.
+///
+/// Args:
+///     path: Root directory to scan
+///     py_pattern_matchers: List of Python callables that take (dirpath, dirnames, filenames) and return bool
+///     max_depth: Optional maximum depth to traverse
+///     follow_links: Whether to follow symbolic links
+///
+/// Returns:
+///     List of ScanResult tuples (path, pattern_index) for directories that matched
+#[pyfunction]
+#[pyo3(signature = (path, py_pattern_matchers, max_depth=None, follow_links=false))]
+pub fn scan_parallel(
+    py: Python,
+    path: String,
+    py_pattern_matchers: Vec<PyObject>,
+    max_depth: Option<usize>,
+    follow_links: bool,
+) -> PyResult<Vec<ScanResult>> {
+    // First, walk and collect all directories
+    let entries = walk_parallel(path, max_depth, follow_links)?;
+
+    // Now match each directory against patterns
+    let mut results = Vec::new();
+
+    for entry in entries {
+        let dirpath = entry.path;
+        let dirnames = entry.dirnames;
+        let filenames = entry.filenames;
+
+        // Try each pattern
+        for (pattern_idx, matcher) in py_pattern_matchers.iter().enumerate() {
+            // Call Python matcher: matcher.matches((dirpath, dirnames, filenames))
+            let match_args = (&dirpath, &dirnames, &filenames);
+            let result = matcher.call_method1(py, "matches", (match_args,))?;
+            let matches: bool = result.extract(py)?;
+
+            if matches {
+                results.push(ScanResult {
+                    path: dirpath.clone(),
+                    pattern_index: pattern_idx,
+                });
+            }
+        }
+    }
+
+    Ok(results)
+}
+
