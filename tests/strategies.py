@@ -26,7 +26,9 @@ def valid_name_strategy(
         ),
         min_size=min_size,
         max_size=max_size,
-    ).filter(lambda s: s.strip() and s not in (".", ".."))  # No whitespace-only names or special dirs
+    ).filter(
+        lambda s: s.strip() and s not in (".", "..")
+    )  # No whitespace-only names or special dirs
 
 
 @st.composite
