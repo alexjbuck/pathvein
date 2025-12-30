@@ -168,3 +168,41 @@ jobs:
           gh release create "v$VERSION" \
             --title "v$VERSION" \
             --generate-notes
+
+  deploy-docs:
+    name: Deploy versioned documentation
+    needs: [changesets, create-release]
+    if: needs.changesets.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for mike versioning
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install pathvein with docs dependencies
+        run: uv pip install --system -e '.[docs]'
+
+      - name: Configure git for mike
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Deploy version documentation
+        env:
+          VERSION: ${{ needs.changesets.outputs.version }}
+        run: |
+          mike deploy --push --update-aliases $VERSION stable
+          mike set-default --push stable
