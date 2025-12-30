@@ -34,10 +34,88 @@ impl DirEntry {
     }
 }
 
+/// Sequential directory walking - fast for small directories
+///
+/// Uses a simple sequential walk without parallel overhead. Best for small directories
+/// (< 1000 entries) where parallel setup overhead dominates actual work.
+///
+/// Args:
+///     path: Root directory to walk
+///     max_depth: Optional maximum depth to traverse (None = unlimited)
+///     follow_links: Whether to follow symbolic links (default: false)
+///
+/// Returns:
+///     List of DirEntry objects, each containing (path, dirnames, filenames)
+#[pyfunction]
+#[pyo3(signature = (path, max_depth=None, follow_links=false))]
+pub fn walk_sequential(
+    path: String,
+    max_depth: Option<usize>,
+    follow_links: bool,
+) -> PyResult<Vec<DirEntry>> {
+    use std::collections::HashMap;
+
+    let mut builder = WalkBuilder::new(&path);
+
+    if let Some(depth) = max_depth {
+        builder.max_depth(Some(depth));
+    }
+
+    builder.follow_links(follow_links);
+    builder.hidden(false);
+    builder.ignore(false);
+    builder.git_ignore(false);
+    builder.git_global(false);
+    builder.git_exclude(false);
+
+    // Use simple HashMap for sequential walk
+    let mut dir_contents: HashMap<PathBuf, DirContents> = HashMap::new();
+
+    // Sequential walk - no parallel overhead
+    for dir_entry in builder.build().flatten() {
+        let path = dir_entry.path();
+
+        if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
+            if let Some(file_type) = dir_entry.file_type() {
+                let entry = dir_contents
+                    .entry(parent.to_path_buf())
+                    .or_insert((SmallVec::new(), SmallVec::new()));
+
+                if file_type.is_file() {
+                    entry.0.push(name.to_os_string());
+                } else if file_type.is_dir() {
+                    entry.1.push(name.to_os_string());
+                }
+            }
+        }
+    }
+
+    // Convert to DirEntry format
+    let results: Vec<DirEntry> = dir_contents
+        .into_iter()
+        .map(|(path, (files, dirs))| DirEntry {
+            path: path.to_string_lossy().into_owned(),
+            filenames: files
+                .iter()
+                .map(|s| s.to_string_lossy().into_owned())
+                .collect(),
+            dirnames: dirs
+                .iter()
+                .map(|s| s.to_string_lossy().into_owned())
+                .collect(),
+        })
+        .collect();
+
+    Ok(results)
+}
+
 /// Parallel directory walking using ignore crate (same as ripgrep)
 ///
 /// Uses the ignore crate's WalkParallel for efficient parallel directory
 /// traversal. This is the same approach used by ripgrep for fast searching.
+///
+/// For small directories (<1000 expected entries), automatically falls back
+/// to sequential walk to avoid parallel overhead.
 ///
 /// Args:
 ///     path: Root directory to walk
@@ -53,6 +131,18 @@ pub fn walk_parallel(
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<DirEntry>> {
+    // For very shallow directories, sequential is faster (avoids ~2ms parallel overhead)
+    // Use sequential ONLY for depth 1-2 (known shallow)
+    // Use parallel for everything else (None or depth >= 3)
+    let use_sequential = match max_depth {
+        Some(1) | Some(2) => true, // Very shallow, use sequential
+        _ => false,                // Everything else: use parallel
+    };
+
+    if use_sequential {
+        return walk_sequential(path, max_depth, follow_links);
+    }
+
     // Build parallel walker (same as ripgrep uses)
     let mut builder = WalkBuilder::new(&path);
 
@@ -78,11 +168,10 @@ pub fn walk_parallel(
             if let Ok(dir_entry) = entry_result {
                 let path = dir_entry.path();
 
-                // Get parent directory and filename - no string allocation!
+                // Get parent directory and filename
                 if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
                     if let Some(file_type) = dir_entry.file_type() {
-                        // DashMap handles locking internally with sharding - no explicit lock needed
-                        // to_path_buf() only allocates the PathBuf, not a String
+                        // DashMap handles locking internally with sharding
                         let mut entry = dir_contents
                             .entry(parent.to_path_buf())
                             .or_insert((SmallVec::new(), SmallVec::new()));
