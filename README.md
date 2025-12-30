@@ -19,6 +19,14 @@
 </div>
 <!-- markdownlint-restore MD033 MD041 -->
 
+## Documentation
+
+📚 **[Full documentation available at alexjbuck.github.io/pathvein](https://alexjbuck.github.io/pathvein/)**
+
+- [Installation Guide](https://alexjbuck.github.io/pathvein/getting-started/installation/)
+- [Quick Start Tutorial](https://alexjbuck.github.io/pathvein/getting-started/quick-start/)
+- [API Reference](https://alexjbuck.github.io/pathvein/api/)
+
 ## Installation
 
 ```shell
