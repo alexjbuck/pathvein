@@ -75,14 +75,17 @@ pub fn walk_parallel(
                 // Get parent directory
                 if let Some(parent) = path.parent() {
                     let parent_str = parent.to_string_lossy().to_string();
-                    let name = path.file_name()
+                    let name = path
+                        .file_name()
                         .and_then(|n| n.to_str())
                         .map(|s| s.to_string());
 
                     if let Some(name) = name {
                         if let Some(file_type) = dir_entry.file_type() {
                             let mut contents = dir_contents.lock().unwrap();
-                            let entry = contents.entry(parent_str).or_insert((SmallVec::new(), SmallVec::new()));
+                            let entry = contents
+                                .entry(parent_str)
+                                .or_insert((SmallVec::new(), SmallVec::new()));
 
                             if file_type.is_file() {
                                 entry.0.push(name);
