@@ -4,6 +4,9 @@ use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+/// Type alias for directory contents: (filenames, dirnames)
+type DirContents = (SmallVec<[String; 32]>, SmallVec<[String; 8]>);
+
 /// Directory entry returned from walk
 #[pyclass]
 #[derive(Clone)]
@@ -62,7 +65,7 @@ pub fn walk_parallel(
     builder.git_exclude(false); // Don't use .git/info/exclude
 
     // Collect all entries grouped by directory
-    let dir_contents: Arc<Mutex<HashMap<String, (SmallVec<[String; 32]>, SmallVec<[String; 8]>)>>> =
+    let dir_contents: Arc<Mutex<HashMap<String, DirContents>>> =
         Arc::new(Mutex::new(HashMap::new()));
 
     // Walk in parallel
