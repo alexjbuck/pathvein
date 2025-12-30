@@ -53,7 +53,6 @@ pub fn walk_parallel(
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<DirEntry>> {
-
     // Build parallel walker (same as ripgrep uses)
     let mut builder = WalkBuilder::new(&path);
 
@@ -137,7 +136,10 @@ pub struct ScanResult {
 #[pymethods]
 impl ScanResult {
     fn __repr__(&self) -> String {
-        format!("ScanResult(path='{}', pattern_index={})", self.path, self.pattern_index)
+        format!(
+            "ScanResult(path='{}', pattern_index={})",
+            self.path, self.pattern_index
+        )
     }
 
     fn __hash__(&self) -> u64 {
@@ -209,4 +211,3 @@ pub fn scan_parallel(
 
     Ok(results)
 }
-

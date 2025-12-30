@@ -57,6 +57,48 @@ def walk_parallel(
         return results
 
 
+def scan_parallel(
+    path: str, patterns, max_depth: Optional[int] = None, follow_links: bool = False
+):
+    """
+    Scan directory tree for pattern matches in Rust.
+
+    This is a streaming implementation that walks AND matches in Rust,
+    avoiding the overhead of returning all data to Python and then
+    matching it. Instead, we walk in Rust, call back to Python pattern
+    matchers, and return only matches.
+
+    Args:
+        path: Root directory to scan
+        patterns: List of FileStructurePattern objects to match against
+        max_depth: Optional maximum depth to traverse
+        follow_links: Whether to follow symbolic links
+
+    Returns:
+        List of (path, pattern) tuples for directories that matched
+    """
+    if HAS_RUST_BACKEND and _pathvein_rs is not None:
+        from pathlib import Path as PathType
+
+        # Use Rust backend - walk and match in one pass
+        results = _pathvein_rs.scan_parallel(path, patterns, max_depth, follow_links)
+        # Convert results back to (Path, pattern) tuples
+        return [(PathType(r.path), patterns[r.pattern_index]) for r in results]
+    else:
+        # Fall back to Python implementation
+        from pathlib import Path as PathType
+
+        results = []
+        for dirpath_str, dirnames, filenames in walk_parallel(
+            path, max_depth, follow_links
+        ):
+            dirpath = PathType(dirpath_str)
+            for pattern in patterns:
+                if pattern.matches((dirpath, dirnames, filenames)):
+                    results.append((dirpath, pattern))
+        return results
+
+
 class PatternMatcher:
     """
     High-performance glob pattern matcher.

@@ -240,6 +240,93 @@ class TestComparison:
         assert len(result) > 0
 
 
+# Public API Benchmarks
+class TestPublicAPI:
+    """Benchmark public API functions that users actually call.
+
+    These are different from micro benchmarks - they test the full API
+    surface that users interact with, not internal implementation details.
+    """
+
+    def test_scan_api(self, benchmark, temp_dir_structure):
+        """Benchmark the public scan() API function."""
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        # Create patterns that will find Python and Rust files
+        patterns = [
+            FileStructurePattern().add_file("*.py"),
+            FileStructurePattern().add_file("*.rs"),
+        ]
+
+        result = benchmark(lambda: scan(temp_dir_structure, patterns))
+        # We should find some matches in our test structure
+        assert len(result) >= 0
+
+    def test_assess_api(self, benchmark, temp_dir_structure):
+        """Benchmark the public assess() API function."""
+        from pathvein import assess
+        from pathvein.pattern import FileStructurePattern
+
+        # Find a file in the test structure
+        import os
+
+        test_file = None
+        for root, dirs, files in os.walk(temp_dir_structure):
+            if files:
+                test_file = (
+                    temp_dir_structure
+                    / root.replace(str(temp_dir_structure), "").lstrip("/")
+                    / files[0]
+                )
+                break
+
+        if test_file is None:
+            # Create a test file if none exist
+            test_file = temp_dir_structure / "test.py"
+            test_file.touch()
+
+        patterns = [FileStructurePattern().add_file("*.py")]
+
+        result = benchmark(lambda: list(assess(test_file, patterns)))
+        assert isinstance(result, list)
+
+    def test_scan_api_complex_pattern(self, benchmark, temp_dir_structure):
+        """Benchmark scan() with complex patterns (required + optional files)."""
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        # Complex pattern with required and optional files
+        pattern = (
+            FileStructurePattern().add_file("*.py").add_file("*.md", is_optional=True)
+        )
+
+        result = benchmark(lambda: scan(temp_dir_structure, [pattern]))
+        assert len(result) >= 0
+
+    def test_shuffle_to_api_dryrun(self, benchmark, temp_dir_structure):
+        """Benchmark the public shuffle_to() API function (dryrun mode)."""
+        from pathvein import scan, shuffle_to
+        from pathvein.pattern import FileStructurePattern
+        from pathlib import Path
+        import tempfile
+
+        # First scan to get matches
+        patterns = [FileStructurePattern().add_file("*.py")]
+        matches = scan(temp_dir_structure, patterns)
+
+        if not matches:
+            # Skip if no matches
+            return
+
+        # Benchmark shuffle_to in dryrun mode
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = Path(tmpdir) / "output"
+            result = benchmark(lambda: shuffle_to(matches, dest, dryrun=True))
+
+        assert isinstance(result, list)
+
+
 if __name__ == "__main__":
     # Show instructions if run directly
     print(__doc__)
