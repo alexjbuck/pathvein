@@ -46,9 +46,7 @@ impl DirEntry {
 ///
 /// Returns:
 ///     List of DirEntry objects, each containing (path, dirnames, filenames)
-#[pyfunction]
-#[pyo3(signature = (path, max_depth=None, follow_links=false))]
-pub fn walk_sequential(
+fn walk_sequential_impl(
     path: String,
     max_depth: Option<usize>,
     follow_links: bool,
@@ -131,16 +129,14 @@ pub fn walk_parallel(
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<DirEntry>> {
-    // For very shallow directories, sequential is faster (avoids ~2ms parallel overhead)
-    // Use sequential ONLY for depth 1-2 (known shallow)
-    // Use parallel for everything else (None or depth >= 3)
-    let use_sequential = match max_depth {
-        Some(1) | Some(2) => true, // Very shallow, use sequential
-        _ => false,                // Everything else: use parallel
-    };
-
-    if use_sequential {
-        return walk_sequential(path, max_depth, follow_links);
+    // Automatically choose sequential vs parallel based on max_depth
+    // For very shallow trees (depth 1-2), sequential avoids ~2ms parallel overhead
+    // For deeper/unknown depth, use parallel (optimized for large trees)
+    //
+    // Note: For small flat directories, Python's os.walk may be faster due to FFI overhead.
+    // This implementation is optimized for large directory trees with parallelization.
+    if matches!(max_depth, Some(1) | Some(2)) {
+        return walk_sequential_impl(path, max_depth, follow_links);
     }
 
     // Build parallel walker (same as ripgrep uses)
