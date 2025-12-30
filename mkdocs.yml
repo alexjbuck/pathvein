@@ -1,0 +1,88 @@
+site_name: Pathvein Documentation
+site_description: Rich and deep file structure pattern matching
+site_url: https://alexjbuck.github.io/pathvein/
+repo_url: https://github.com/alexjbuck/pathvein
+repo_name: alexjbuck/pathvein
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            docstring_section_style: spacy
+            show_root_heading: true
+            show_source: true
+            show_category_heading: true
+            members_order: source
+            group_by_category: true
+            show_signature_annotations: true
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quick-start.md
+  - User Guide:
+    - Patterns: guide/patterns.md
+    - Scanning: guide/scanning.md
+    - Shuffling: guide/shuffling.md
+  - API Reference:
+    - Overview: api/index.md
+    - Core Functions: api/functions.md
+    - FileStructurePattern: api/pattern.md
+    - Data Types: api/types.md
+    - Backend: api/backend.md
+  - About:
+    - Changelog: about/changelog.md
+    - Architecture: about/architecture.md
+
+extra:
+  version:
+    provider: mike
