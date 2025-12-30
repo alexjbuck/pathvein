@@ -1,8 +1,8 @@
+use dashmap::DashMap;
 use ignore::WalkBuilder;
 use pyo3::prelude::*;
 use smallvec::SmallVec;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 /// Type alias for directory contents: (filenames, dirnames)
 type DirContents = (SmallVec<[String; 32]>, SmallVec<[String; 8]>);
@@ -64,9 +64,8 @@ pub fn walk_parallel(
     builder.git_global(false); // Don't use global .gitignore
     builder.git_exclude(false); // Don't use .git/info/exclude
 
-    // Collect all entries grouped by directory
-    let dir_contents: Arc<Mutex<HashMap<String, DirContents>>> =
-        Arc::new(Mutex::new(HashMap::new()));
+    // Collect all entries grouped by directory (using DashMap for lock-free concurrency)
+    let dir_contents: Arc<DashMap<String, DirContents>> = Arc::new(DashMap::new());
 
     // Walk in parallel
     builder.build_parallel().run(|| {
@@ -85,8 +84,8 @@ pub fn walk_parallel(
 
                     if let Some(name) = name {
                         if let Some(file_type) = dir_entry.file_type() {
-                            let mut contents = dir_contents.lock().unwrap();
-                            let entry = contents
+                            // DashMap handles locking internally with sharding - no explicit lock needed
+                            let mut entry = dir_contents
                                 .entry(parent_str)
                                 .or_insert((SmallVec::new(), SmallVec::new()));
 
@@ -104,13 +103,15 @@ pub fn walk_parallel(
     });
 
     // Convert to DirEntry format
-    let contents = dir_contents.lock().unwrap();
-    let results: Vec<DirEntry> = contents
+    let results: Vec<DirEntry> = dir_contents
         .iter()
-        .map(|(path, (files, dirs))| DirEntry {
-            path: path.clone(),
-            filenames: files.to_vec(),
-            dirnames: dirs.to_vec(),
+        .map(|entry| {
+            let (path, (files, dirs)) = entry.pair();
+            DirEntry {
+                path: path.clone(),
+                filenames: files.to_vec(),
+                dirnames: dirs.to_vec(),
+            }
         })
         .collect();
 

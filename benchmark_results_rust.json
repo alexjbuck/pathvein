@@ -12,117 +12,89 @@
     {
       "operation": "Directory Walking",
       "scenario": "Small tree (2 levels, ~100 files)",
-      "duration_seconds": 0.007802009582519531,
-      "items_processed": 43,
-      "items_per_second": 5511.40056227845
+      "duration_seconds": 0.0056285858154296875,
+      "items_processed": 44,
+      "items_per_second": 7817.238902067096
     },
     {
       "operation": "Directory Walking",
       "scenario": "Medium tree (3 levels, ~1000 files)",
-      "duration_seconds": 0.008262157440185547,
-      "items_processed": 440,
-      "items_per_second": 53254.85542794483
+      "duration_seconds": 0.0048809051513671875,
+      "items_processed": 441,
+      "items_per_second": 90352.0937866354
     },
     {
       "operation": "Directory Walking",
       "scenario": "Large tree (4 levels, ~10000 files)",
-      "duration_seconds": 0.05535554885864258,
-      "items_processed": 4055,
-      "items_per_second": 73253.72223035774
+      "duration_seconds": 0.022231578826904297,
+      "items_processed": 4056,
+      "items_per_second": 182443.18280676918
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Single pattern, simple (*.py)",
-      "duration_seconds": 0.0005006790161132812,
+      "duration_seconds": 0.0004363059997558594,
       "items_processed": 125,
       "total_files": 1000,
-      "items_per_second": 249660.95238095237
+      "items_per_second": 286496.174863388
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Single pattern, complex (test_*.py)",
-      "duration_seconds": 0.004210948944091797,
+      "duration_seconds": 0.003965854644775391,
       "items_processed": 0,
       "total_files": 1000
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Multiple patterns, 3 patterns",
-      "duration_seconds": 0.00023126602172851562,
+      "duration_seconds": 0.0002276897430419922,
       "items_processed": 375,
       "total_files": 1000,
-      "items_per_second": 1621509.2783505155
+      "items_per_second": 1646978.0104712043
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Multiple patterns, 12 patterns",
-      "duration_seconds": 0.0004417896270751953,
+      "duration_seconds": 0.00032639503479003906,
       "items_processed": 250,
       "total_files": 1000,
-      "items_per_second": 565880.1942795467
+      "items_per_second": 765943.0241051862
     },
     {
       "operation": "Pattern Matching",
       "scenario": "Repeated matching (100x, cache test)",
-      "duration_seconds": 0.026357173919677734,
+      "duration_seconds": 0.025995731353759766,
       "items_processed": 12500,
-      "items_per_second": 474254.18362731795
+      "items_per_second": 480848.1757983748
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Small tree, 2 patterns",
-      "duration_seconds": 0.002219676971435547,
+      "duration_seconds": 0.003997087478637695,
       "items_processed": 16,
-      "items_per_second": 7208.256068743287
+      "items_per_second": 4002.914643602744
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Medium tree, 3 patterns",
-      "duration_seconds": 0.007959365844726562,
+      "duration_seconds": 0.008183956146240234,
       "items_processed": 252,
-      "items_per_second": 31660.81380301941
+      "items_per_second": 30791.95385422129
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Large tree, 5 patterns",
-      "duration_seconds": 0.05642962455749512,
+      "duration_seconds": 0.022565603256225586,
       "items_processed": 3900,
-      "items_per_second": 69112.6341984849
+      "items_per_second": 172829.4145614758
     },
     {
       "operation": "End-to-End Scan",
       "scenario": "Large tree, complex patterns",
-      "duration_seconds": 0.05602240562438965,
+      "duration_seconds": 0.012713909149169922,
       "items_processed": 780,
-      "items_per_second": 13923.000829875518
-    },
-    {
-      "operation": "Real Repository",
-      "scenario": "Scan Python files (*.py)",
-      "duration_seconds": 0.05456709861755371,
-      "items_processed": 17,
-      "items_per_second": 311.54304389809107
-    },
-    {
-      "operation": "Real Repository",
-      "scenario": "Scan Rust files (*.rs)",
-      "duration_seconds": 0.04866647720336914,
-      "items_processed": 4,
-      "items_per_second": 82.19210080246127
-    },
-    {
-      "operation": "Real Repository",
-      "scenario": "Scan all source files",
-      "duration_seconds": 0.04255032539367676,
-      "items_processed": 34,
-      "items_per_second": 799.0538188705041
-    },
-    {
-      "operation": "Real Repository",
-      "scenario": "Scan Python excluding tests",
-      "duration_seconds": 0.044603586196899414,
-      "items_processed": 10,
-      "items_per_second": 224.19721938625514
+      "items_per_second": 61350.131643100925
     }
   ]
 }
