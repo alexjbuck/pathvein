@@ -42,187 +42,253 @@ def extract_benchmarks(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     return benchmarks
 
 
-def categorize_benchmark(name: str) -> tuple[str, Optional[str]]:
+def categorize_benchmark(name: str) -> tuple[str, Optional[str], Optional[int]]:
     """
-    Categorize benchmark by type and approach.
+    Categorize benchmark by type, approach, and scenario.
 
-    Returns: (category, approach)
+    Returns: (category, approach, scenario)
     - category: "api" or "micro"
-    - approach: "pure_python", "hybrid", "pure_rust", or None (for non-comparison benchmarks)
+    - approach: "pure_python", "hybrid", "pure_rust", or None
+    - scenario: 1, 2, 3, 4, or None
     """
-    # Main 3-way comparison benchmarks (CLEARLY NAMED)
-    if "test_api_scan_1_pure_python" in name:
-        return ("api", "pure_python")
-    elif "test_api_scan_2_hybrid" in name:
-        return ("api", "hybrid")
-    elif "test_api_scan_3_pure_rust" in name:
-        return ("api", "pure_rust")
-    # Other API benchmarks (not part of main comparison)
+    # Scenario benchmarks (4 scenarios × 3 approaches)
+    if "scenario1" in name:
+        if "1_pure_python" in name:
+            return ("scenario", "pure_python", 1)
+        elif "2_hybrid" in name:
+            return ("scenario", "hybrid", 1)
+        elif "3_pure_rust" in name:
+            return ("scenario", "pure_rust", 1)
+    elif "scenario2" in name:
+        if "1_pure_python" in name:
+            return ("scenario", "pure_python", 2)
+        elif "2_hybrid" in name:
+            return ("scenario", "hybrid", 2)
+        elif "3_pure_rust" in name:
+            return ("scenario", "pure_rust", 2)
+    elif "scenario3" in name:
+        if "1_pure_python" in name:
+            return ("scenario", "pure_python", 3)
+        elif "2_hybrid" in name:
+            return ("scenario", "hybrid", 3)
+        elif "3_pure_rust" in name:
+            return ("scenario", "pure_rust", 3)
+    elif "scenario4" in name:
+        if "1_pure_python" in name:
+            return ("scenario", "pure_python", 4)
+        elif "2_hybrid" in name:
+            return ("scenario", "hybrid", 4)
+        elif "3_pure_rust" in name:
+            return ("scenario", "pure_rust", 4)
+    # Other API benchmarks (not part of scenario comparison)
     elif "test_api" in name:
-        return ("api", None)
+        return ("api", None, None)
     # Micro benchmarks
     elif "test_micro" in name:
-        return ("micro", None)
+        return ("micro", None, None)
     else:
-        return ("other", None)
+        return ("other", None, None)
 
 
 def generate_markdown_comparison(data: Dict) -> str:
-    """Generate markdown comparison showing Pure Python vs Hybrid vs Pure Rust."""
+    """Generate markdown comparison showing 3 methods across 4 scenarios."""
     benchmarks = {b["name"]: b for b in extract_benchmarks(data)}
 
-    # Find the three main scan benchmarks
-    pure_python = None
-    hybrid = None
-    pure_rust = None
+    # Organize scenario benchmarks by scenario and approach
+    scenarios = {
+        1: {},  # Small dir + 1 simple pattern
+        2: {},  # Small dir + 8 patterns
+        3: {},  # Large dir + 1 simple pattern
+        4: {},  # Large dir + 5 complex patterns
+    }
+
+    # Categorize all benchmarks
+    micro_benchmarks = []
+    api_benchmarks = []
 
     for name, bench in benchmarks.items():
-        cat, approach = categorize_benchmark(name)
-        if approach == "pure_python":
-            pure_python = bench
-        elif approach == "hybrid":
-            hybrid = bench
-        elif approach == "pure_rust":
-            pure_rust = bench
+        cat, approach, scenario = categorize_benchmark(name)
+        if cat == "scenario" and scenario is not None:
+            scenarios[scenario][approach] = bench
+        elif cat == "micro":
+            micro_benchmarks.append((name, bench))
+        elif cat == "api":
+            api_benchmarks.append((name, bench))
 
     lines = [
-        "# 🚀 Pathvein Performance: Pure Python vs Hybrid vs Pure Rust",
+        "# 🚀 Pathvein Performance Benchmarks",
         "",
-        "## Main Scan Comparison (3 Approaches)",
+        "## Scan API: 3 Methods Across 4 Scenarios",
         "",
-        "This compares **3 different scan implementations** to answer: **Is Rust worth it?**",
+        "Comparing **3 different scan implementations**:",
         "",
-        "1. **Approach #1 - Pure Python**: `os.walk()` + Python `fnmatch` (baseline, no Rust)",
-        "2. **Approach #2 - Hybrid**: Python `os.walk()` + Rust matchers (fast matching only)",
-        "3. **Approach #3 - Pure Rust**: Everything in Rust, precompiled patterns (optimal)",
+        "1. **Pure Python**: `os.walk()` + Python `fnmatch` (baseline, no Rust)",
+        "2. **Hybrid**: Python `os.walk()` + Rust pattern matching",
+        "3. **Pure Rust**: Everything in Rust, precompiled patterns (optimal)",
         "",
     ]
 
-    if not all([pure_python, hybrid, pure_rust]):
-        lines.append("⚠️ **Warning**: Not all three scan benchmarks found in results.")
+    # Check if we have all scenario data
+    missing_scenarios = []
+    for scenario_num in [1, 2, 3, 4]:
+        if len(scenarios[scenario_num]) != 3:
+            missing_scenarios.append(scenario_num)
+
+    if missing_scenarios:
+        lines.append(f"⚠️ **Warning**: Missing data for scenarios: {missing_scenarios}")
         lines.append("")
-        lines.append(f"- Pure Python: {'✓' if pure_python else '✗'}")
-        lines.append(f"- Hybrid: {'✓' if hybrid else '✗'}")
-        lines.append(f"- Pure Rust: {'✓' if pure_rust else '✗'}")
-        return "\n".join(lines)
 
-    # Main comparison table
+    # Scenario descriptions
+    scenario_descriptions = {
+        1: "Small dir (~140 files) + 1 simple pattern",
+        2: "Small dir (~140 files) + 8 patterns",
+        3: "Large dir (~31,250 files) + 1 simple pattern",
+        4: "Large dir (~31,250 files) + 5 complex patterns",
+    }
+
+    # Generate table for each scenario
     lines.extend(
         [
-            "| Approach | Time (ms) | Speedup vs #1 | Speedup vs #2 | Status |",
-            "|----------|-----------|---------------|---------------|--------|",
+            "| Scenario | Pure Python (ms) | Hybrid (ms) | Pure Rust (ms) | Rust vs Python | Status |",
+            "|----------|------------------|-------------|----------------|----------------|--------|",
         ]
     )
 
-    pp_ms = pure_python["mean"] * 1000
-    hybrid_ms = hybrid["mean"] * 1000
-    rust_ms = pure_rust["mean"] * 1000
+    for scenario_num in [1, 2, 3, 4]:
+        scenario_data = scenarios[scenario_num]
+        if len(scenario_data) != 3:
+            continue  # Skip incomplete scenarios
 
-    # Row 1: Pure Python
-    lines.append(f"| #1 Pure Python | {pp_ms:.3f} | 1.00x (baseline) | — | 📊 |")
+        pp = scenario_data.get("pure_python")
+        hybrid = scenario_data.get("hybrid")
+        rust = scenario_data.get("pure_rust")
 
-    # Row 2: Hybrid
-    hybrid_speedup_vs_python = pure_python["mean"] / hybrid["mean"]
-    if hybrid_speedup_vs_python >= 1.2:
-        hybrid_emoji = "⚡"
-    elif hybrid_speedup_vs_python >= 0.8:
-        hybrid_emoji = "➖"
-    else:
-        hybrid_emoji = "🐌"
-
-    lines.append(
-        f"| #2 Hybrid | {hybrid_ms:.3f} | {hybrid_speedup_vs_python:.2f}x | 1.00x | {hybrid_emoji} |"
-    )
-
-    # Row 3: Pure Rust
-    rust_speedup_vs_python = pure_python["mean"] / pure_rust["mean"]
-    rust_speedup_vs_hybrid = hybrid["mean"] / pure_rust["mean"]
-
-    if rust_speedup_vs_python >= 2.0:
-        rust_emoji = "🚀"
-    elif rust_speedup_vs_python >= 1.2:
-        rust_emoji = "⚡"
-    elif rust_speedup_vs_python >= 0.8:
-        rust_emoji = "➖"
-    else:
-        rust_emoji = "🐌"
-
-    lines.append(
-        f"| #3 Pure Rust | {rust_ms:.3f} | {rust_speedup_vs_python:.2f}x | "
-        f"{rust_speedup_vs_hybrid:.2f}x | {rust_emoji} |"
-    )
-
-    lines.extend(
-        [
-            "",
-            "### Key Insights",
-            "",
-            f"- **Hybrid vs Pure Python**: {hybrid_speedup_vs_python:.2f}x speedup "
-            f"({abs(hybrid_speedup_vs_python - 1.0) * 100:.1f}% {'faster' if hybrid_speedup_vs_python > 1 else 'slower'})",
-            f"- **Pure Rust vs Pure Python**: {rust_speedup_vs_python:.2f}x speedup "
-            f"({abs(rust_speedup_vs_python - 1.0) * 100:.1f}% {'faster' if rust_speedup_vs_python > 1 else 'slower'})",
-            f"- **Pure Rust vs Hybrid**: {rust_speedup_vs_hybrid:.2f}x speedup "
-            f"({abs(rust_speedup_vs_hybrid - 1.0) * 100:.1f}% {'faster' if rust_speedup_vs_hybrid > 1 else 'slower'})",
-            "",
-        ]
-    )
-
-    # Verdict
-    if rust_speedup_vs_python >= 2.0:
-        verdict = "🎉 **Rust is definitely worth it!** Pure Rust implementation is ≥2x faster."
-    elif rust_speedup_vs_python >= 1.5:
-        verdict = "✅ **Rust is worth it.** Pure Rust provides significant speedup."
-    elif rust_speedup_vs_python >= 1.2:
-        verdict = "👍 **Rust provides moderate improvement.** Worth keeping if FFI complexity is manageable."
-    elif rust_speedup_vs_python >= 0.8:
-        verdict = "⚠️ **Rust provides minimal benefit.** Consider if added complexity is worth it."
-    else:
-        verdict = "❌ **Rust is slower!** Something is wrong with the implementation."
-
-    lines.extend(
-        [
-            "### Verdict",
-            "",
-            verdict,
-            "",
-        ]
-    )
-
-    # Other benchmarks
-    lines.extend(
-        [
-            "## Other Benchmarks",
-            "",
-            "| Benchmark | Time (ms) | Type |",
-            "|-----------|-----------|------|",
-        ]
-    )
-
-    for name in sorted(benchmarks.keys()):
-        cat, approach = categorize_benchmark(name)
-        # Skip the three main comparison benchmarks we already showed
-        if approach in ["pure_python", "hybrid", "pure_rust"]:
+        if not all([pp, hybrid, rust]):
             continue
 
-        bench = benchmarks[name]
-        display_name = name.replace("test_", "").replace("_", " ").title()
-        time_ms = bench["mean"] * 1000
-        bench_type = "🔬 Micro" if cat == "micro" else "📦 API"
+        pp_ms = pp["mean"] * 1000
+        hybrid_ms = hybrid["mean"] * 1000
+        rust_ms = rust["mean"] * 1000
 
-        lines.append(f"| {display_name} | {time_ms:.3f} | {bench_type} |")
+        # Calculate speedup
+        speedup = pp["mean"] / rust["mean"]
+
+        # Status emoji
+        if speedup >= 2.0:
+            status = "🚀"
+        elif speedup >= 1.5:
+            status = "⚡"
+        elif speedup >= 1.2:
+            status = "👍"
+        elif speedup >= 0.8:
+            status = "➖"
+        else:
+            status = "🐌"
+
+        desc = scenario_descriptions[scenario_num]
+        lines.append(
+            f"| **{scenario_num}**: {desc} | {pp_ms:.1f} | {hybrid_ms:.1f} | {rust_ms:.1f} | {speedup:.2f}x | {status} |"
+        )
 
     lines.extend(
         [
             "",
+            "### Summary",
+            "",
+        ]
+    )
+
+    # Calculate average speedup across all scenarios
+    total_speedup = 0
+    count = 0
+    for scenario_num in [1, 2, 3, 4]:
+        scenario_data = scenarios[scenario_num]
+        if len(scenario_data) == 3:
+            pp = scenario_data["pure_python"]
+            rust = scenario_data["pure_rust"]
+            total_speedup += pp["mean"] / rust["mean"]
+            count += 1
+
+    if count > 0:
+        avg_speedup = total_speedup / count
+        lines.append(
+            f"- **Average Rust speedup**: {avg_speedup:.2f}x across {count} scenarios"
+        )
+
+        if avg_speedup >= 2.0:
+            verdict = "🎉 **Pure Rust is definitely worth it!** Consistent ≥2x speedup."
+        elif avg_speedup >= 1.5:
+            verdict = (
+                "✅ **Pure Rust provides significant speedup** across all scenarios."
+            )
+        elif avg_speedup >= 1.2:
+            verdict = (
+                "👍 **Pure Rust provides moderate improvement** across all scenarios."
+            )
+        else:
+            verdict = "⚠️ **Pure Rust provides minimal benefit** - consider complexity trade-offs."
+
+        lines.append(f"- {verdict}")
+
+    lines.append("")
+
+    # Micro benchmarks section
+    if micro_benchmarks:
+        lines.extend(
+            [
+                "## Micro Benchmarks",
+                "",
+                "Low-level component benchmarks:",
+                "",
+                "| Benchmark | Time (ms) | Description |",
+                "|-----------|-----------|-------------|",
+            ]
+        )
+
+        for name, bench in sorted(micro_benchmarks, key=lambda x: x[1]["mean"]):
+            time_ms = bench["mean"] * 1000
+
+            # Generate description
+            if "walk_parallel" in name:
+                desc = "Parallel directory walking"
+            elif "pattern_matching_multiple" in name:
+                desc = "Multiple pattern matching"
+            elif "pattern_matching_single" in name:
+                desc = "Single pattern matching"
+            else:
+                desc = name.replace("test_micro_", "").replace("_", " ").title()
+
+            lines.append(f"| {desc} | {time_ms:.3f} | Rust implementation |")
+
+        lines.append("")
+
+    # Other API benchmarks section
+    if api_benchmarks:
+        lines.extend(
+            [
+                "## Other API Benchmarks",
+                "",
+                "| Benchmark | Time (ms) |",
+                "|-----------|-----------|",
+            ]
+        )
+
+        for name, bench in sorted(api_benchmarks, key=lambda x: x[1]["mean"]):
+            time_ms = bench["mean"] * 1000
+            display_name = name.replace("test_api_", "").replace("_", " ").title()
+            lines.append(f"| {display_name} | {time_ms:.3f} |")
+
+        lines.append("")
+
+    lines.extend(
+        [
             "### Legend",
             "",
-            "- 🚀 Significant speedup (≥2.0x)",
-            "- ⚡ Moderate speedup (≥1.2x)",
-            "- ➖ Comparable performance (0.8-1.2x)",
-            "- 🐌 Slower (unusual, may indicate issue)",
-            "- 📊 Baseline (Pure Python)",
-            "- 🔬 Micro benchmark (internal implementation)",
-            "- 📦 API benchmark (user-facing function)",
+            "- 🚀 Excellent speedup (≥2.0x)",
+            "- ⚡ Good speedup (≥1.5x)",
+            "- 👍 Moderate speedup (≥1.2x)",
+            "- ➖ Comparable (0.8-1.2x)",
+            "- 🐌 Slower (investigation needed)",
             "",
             "---",
             "",
@@ -237,58 +303,80 @@ def generate_text_comparison(data: Dict) -> str:
     """Generate plain text comparison (for terminal output)."""
     benchmarks = {b["name"]: b for b in extract_benchmarks(data)}
 
-    # Find the three main scan benchmarks
-    pure_python = None
-    hybrid = None
-    pure_rust = None
+    # Organize scenario benchmarks
+    scenarios = {1: {}, 2: {}, 3: {}, 4: {}}
 
     for name, bench in benchmarks.items():
-        cat, approach = categorize_benchmark(name)
-        if approach == "pure_python":
-            pure_python = bench
-        elif approach == "hybrid":
-            hybrid = bench
-        elif approach == "pure_rust":
-            pure_rust = bench
+        cat, approach, scenario = categorize_benchmark(name)
+        if cat == "scenario" and scenario is not None:
+            scenarios[scenario][approach] = bench
 
     lines = [
         "=" * 80,
-        "PERFORMANCE COMPARISON: Pure Python vs Hybrid vs Pure Rust",
+        "PATHVEIN PERFORMANCE BENCHMARKS",
         "=" * 80,
+        "",
+        "Scan API: 3 Methods Across 4 Scenarios",
         "",
     ]
 
-    if not all([pure_python, hybrid, pure_rust]):
-        lines.append("Warning: Not all three scan benchmarks found")
-        return "\n".join(lines)
+    scenario_descriptions = {
+        1: "Small dir (~140 files) + 1 simple pattern",
+        2: "Small dir (~140 files) + 8 patterns",
+        3: "Large dir (~31,250 files) + 1 simple pattern",
+        4: "Large dir (~31,250 files) + 5 complex patterns",
+    }
 
-    pp_ms = pure_python["mean"] * 1000
-    hybrid_ms = hybrid["mean"] * 1000
-    rust_ms = pure_rust["mean"] * 1000
+    total_speedup = 0
+    count = 0
 
-    hybrid_speedup = pure_python["mean"] / hybrid["mean"]
-    rust_speedup_vs_python = pure_python["mean"] / pure_rust["mean"]
-    rust_speedup_vs_hybrid = hybrid["mean"] / pure_rust["mean"]
+    for scenario_num in [1, 2, 3, 4]:
+        scenario_data = scenarios[scenario_num]
+        if len(scenario_data) != 3:
+            continue
 
-    lines.extend(
-        [
-            "Scan Performance:",
-            f"  Pure Python:  {pp_ms:.3f}ms (baseline)",
-            f"  Hybrid:       {hybrid_ms:.3f}ms ({hybrid_speedup:.2f}x vs Python)",
-            f"  Pure Rust:    {rust_ms:.3f}ms ({rust_speedup_vs_python:.2f}x vs Python, "
-            f"{rust_speedup_vs_hybrid:.2f}x vs Hybrid)",
-            "",
-        ]
-    )
+        pp = scenario_data.get("pure_python")
+        hybrid = scenario_data.get("hybrid")
+        rust = scenario_data.get("pure_rust")
 
-    if rust_speedup_vs_python >= 2.0:
-        lines.append("Verdict: Pure Rust is definitely worth it! (≥2x speedup)")
-    elif rust_speedup_vs_python >= 1.5:
-        lines.append("Verdict: Pure Rust provides significant speedup")
-    elif rust_speedup_vs_python >= 1.2:
-        lines.append("Verdict: Pure Rust provides moderate improvement")
-    else:
-        lines.append("Verdict: Pure Rust provides minimal or no benefit")
+        if not all([pp, hybrid, rust]):
+            continue
+
+        pp_ms = pp["mean"] * 1000
+        hybrid_ms = hybrid["mean"] * 1000
+        rust_ms = rust["mean"] * 1000
+        speedup = pp["mean"] / rust["mean"]
+
+        total_speedup += speedup
+        count += 1
+
+        lines.extend(
+            [
+                f"Scenario {scenario_num}: {scenario_descriptions[scenario_num]}",
+                f"  Pure Python: {pp_ms:.1f}ms",
+                f"  Hybrid:      {hybrid_ms:.1f}ms",
+                f"  Pure Rust:   {rust_ms:.1f}ms ({speedup:.2f}x speedup)",
+                "",
+            ]
+        )
+
+    if count > 0:
+        avg_speedup = total_speedup / count
+        lines.extend(
+            [
+                f"Average Rust speedup: {avg_speedup:.2f}x across {count} scenarios",
+                "",
+            ]
+        )
+
+        if avg_speedup >= 2.0:
+            lines.append("Verdict: Pure Rust is definitely worth it! (≥2x speedup)")
+        elif avg_speedup >= 1.5:
+            lines.append("Verdict: Pure Rust provides significant speedup")
+        elif avg_speedup >= 1.2:
+            lines.append("Verdict: Pure Rust provides moderate improvement")
+        else:
+            lines.append("Verdict: Pure Rust provides minimal benefit")
 
     lines.append("")
     lines.append("=" * 80)
