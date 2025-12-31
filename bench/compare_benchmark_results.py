@@ -48,18 +48,19 @@ def categorize_benchmark(name: str) -> tuple[str, Optional[str]]:
 
     Returns: (category, approach)
     - category: "api" or "micro"
-    - approach: "pure_python", "hybrid", "pure_rust", or None
+    - approach: "pure_python", "hybrid", "pure_rust", or None (for non-comparison benchmarks)
     """
-    if "test_api_scan_pure_python" in name:
+    # Main 3-way comparison benchmarks (CLEARLY NAMED)
+    if "test_api_scan_1_pure_python" in name:
         return ("api", "pure_python")
-    elif "test_api_scan_hybrid" in name:
+    elif "test_api_scan_2_hybrid" in name:
         return ("api", "hybrid")
-    elif "test_api_scan_pure_rust" in name:
+    elif "test_api_scan_3_pure_rust" in name:
         return ("api", "pure_rust")
-    elif "test_api_scan" in name and "complex" in name:
-        return ("api", "pure_rust")  # Complex pattern uses pure rust
+    # Other API benchmarks (not part of main comparison)
     elif "test_api" in name:
         return ("api", None)
+    # Micro benchmarks
     elif "test_micro" in name:
         return ("micro", None)
     else:
@@ -77,22 +78,23 @@ def generate_markdown_comparison(data: Dict) -> str:
 
     for name, bench in benchmarks.items():
         cat, approach = categorize_benchmark(name)
-        if cat == "api" and "scan" in name:
-            if approach == "pure_python":
-                pure_python = bench
-            elif approach == "hybrid":
-                hybrid = bench
-            elif approach == "pure_rust" and "complex" not in name:
-                pure_rust = bench
+        if approach == "pure_python":
+            pure_python = bench
+        elif approach == "hybrid":
+            hybrid = bench
+        elif approach == "pure_rust":
+            pure_rust = bench
 
     lines = [
         "# 🚀 Pathvein Performance: Pure Python vs Hybrid vs Pure Rust",
         "",
-        "This shows the performance of three different approaches:",
+        "## Main Scan Comparison (3 Approaches)",
         "",
-        "- **Pure Python**: `os.walk()` + Python `fnmatch` (no Rust, baseline)",
-        "- **Hybrid**: Rust `walk_parallel()` + Python pattern matching (FFI overhead)",
-        "- **Pure Rust**: Everything in Rust with precompiled patterns (optimal)",
+        "This compares **3 different scan implementations** to answer: **Is Rust worth it?**",
+        "",
+        "1. **Approach #1 - Pure Python**: `os.walk()` + Python `fnmatch` (baseline, no Rust)",
+        "2. **Approach #2 - Hybrid**: Python `os.walk()` + Rust matchers (fast matching only)",
+        "3. **Approach #3 - Pure Rust**: Everything in Rust, precompiled patterns (optimal)",
         "",
     ]
 
@@ -107,10 +109,8 @@ def generate_markdown_comparison(data: Dict) -> str:
     # Main comparison table
     lines.extend(
         [
-            "## Scan Performance Comparison",
-            "",
-            "| Approach | Time (ms) | Speedup vs Python | Speedup vs Hybrid | Status |",
-            "|----------|-----------|-------------------|-------------------|--------|",
+            "| Approach | Time (ms) | Speedup vs #1 | Speedup vs #2 | Status |",
+            "|----------|-----------|---------------|---------------|--------|",
         ]
     )
 
@@ -118,10 +118,10 @@ def generate_markdown_comparison(data: Dict) -> str:
     hybrid_ms = hybrid["mean"] * 1000
     rust_ms = pure_rust["mean"] * 1000
 
-    # Pure Python row
-    lines.append(f"| Pure Python | {pp_ms:.3f} | 1.00x (baseline) | — | 📊 |")
+    # Row 1: Pure Python
+    lines.append(f"| #1 Pure Python | {pp_ms:.3f} | 1.00x (baseline) | — | 📊 |")
 
-    # Hybrid row
+    # Row 2: Hybrid
     hybrid_speedup_vs_python = pure_python["mean"] / hybrid["mean"]
     if hybrid_speedup_vs_python >= 1.2:
         hybrid_emoji = "⚡"
@@ -131,10 +131,10 @@ def generate_markdown_comparison(data: Dict) -> str:
         hybrid_emoji = "🐌"
 
     lines.append(
-        f"| Hybrid | {hybrid_ms:.3f} | {hybrid_speedup_vs_python:.2f}x | 1.00x | {hybrid_emoji} |"
+        f"| #2 Hybrid | {hybrid_ms:.3f} | {hybrid_speedup_vs_python:.2f}x | 1.00x | {hybrid_emoji} |"
     )
 
-    # Pure Rust row
+    # Row 3: Pure Rust
     rust_speedup_vs_python = pure_python["mean"] / pure_rust["mean"]
     rust_speedup_vs_hybrid = hybrid["mean"] / pure_rust["mean"]
 
@@ -148,7 +148,7 @@ def generate_markdown_comparison(data: Dict) -> str:
         rust_emoji = "🐌"
 
     lines.append(
-        f"| Pure Rust | {rust_ms:.3f} | {rust_speedup_vs_python:.2f}x | "
+        f"| #3 Pure Rust | {rust_ms:.3f} | {rust_speedup_vs_python:.2f}x | "
         f"{rust_speedup_vs_hybrid:.2f}x | {rust_emoji} |"
     )
 
@@ -200,13 +200,8 @@ def generate_markdown_comparison(data: Dict) -> str:
 
     for name in sorted(benchmarks.keys()):
         cat, approach = categorize_benchmark(name)
-        # Skip the three main scan benchmarks we already showed
-        if (
-            cat == "api"
-            and "scan" in name
-            and approach in ["pure_python", "hybrid", "pure_rust"]
-            and "complex" not in name
-        ):
+        # Skip the three main comparison benchmarks we already showed
+        if approach in ["pure_python", "hybrid", "pure_rust"]:
             continue
 
         bench = benchmarks[name]
@@ -249,13 +244,12 @@ def generate_text_comparison(data: Dict) -> str:
 
     for name, bench in benchmarks.items():
         cat, approach = categorize_benchmark(name)
-        if cat == "api" and "scan" in name:
-            if approach == "pure_python":
-                pure_python = bench
-            elif approach == "hybrid":
-                hybrid = bench
-            elif approach == "pure_rust" and "complex" not in name:
-                pure_rust = bench
+        if approach == "pure_python":
+            pure_python = bench
+        elif approach == "hybrid":
+            hybrid = bench
+        elif approach == "pure_rust":
+            pure_rust = bench
 
     lines = [
         "=" * 80,
