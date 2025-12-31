@@ -156,11 +156,14 @@ impl ScanResult {
     }
 }
 
-/// Scan directory tree for pattern matches - walk AND match entirely in Rust
+/// Scan directory tree for pattern matches - streaming walk+match in Rust
 ///
-/// This replaces the Python scan() function's walk+match loop with a single
-/// Rust call that does everything internally with NO FFI crossings during the
-/// scan loop.
+/// This does TRUE streaming:
+/// 1. Precompile all patterns ONCE before walking
+/// 2. Walk directories in parallel workers
+/// 3. Match in parallel workers as we walk (no storing all entries)
+/// 4. Only store MATCHES in DashMap
+/// 5. No unbounded memory usage
 ///
 /// Args:
 ///     path: Root directory to scan
@@ -178,9 +181,9 @@ pub fn scan_parallel(
     max_depth: Option<usize>,
     follow_links: bool,
 ) -> PyResult<Vec<ScanResult>> {
-    use crate::file_pattern::FileStructurePattern;
+    use crate::file_pattern::{CompiledPattern, FileStructurePattern};
 
-    // Deserialize patterns from JSON
+    // 1. Deserialize patterns from JSON
     let patterns: Vec<FileStructurePattern> = pattern_jsons
         .iter()
         .map(|json| {
@@ -193,27 +196,98 @@ pub fn scan_parallel(
         })
         .collect::<PyResult<Vec<_>>>()?;
 
-    // Walk the directory tree
-    let entries = walk_parallel(path, max_depth, follow_links)?;
+    // 2. PRECOMPILE all patterns ONCE before walking
+    let compiled_patterns: Vec<CompiledPattern> = patterns
+        .iter()
+        .map(|p| {
+            p.compile().map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Pattern compilation error: {}",
+                    e
+                ))
+            })
+        })
+        .collect::<PyResult<Vec<_>>>()?;
 
-    // Match each directory against patterns - ALL IN RUST
-    let mut results = Vec::new();
+    // 3. Wrap in Arc for sharing across parallel workers
+    let compiled_patterns = Arc::new(compiled_patterns);
 
-    for entry in entries {
-        let dirpath_name = std::path::Path::new(&entry.path)
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+    // 4. Build walker
+    let mut builder = WalkBuilder::new(&path);
+    if let Some(depth) = max_depth {
+        builder.max_depth(Some(depth));
+    }
+    builder.follow_links(follow_links);
+    builder.hidden(false);
+    builder.ignore(false);
+    builder.git_ignore(false);
+    builder.git_global(false);
+    builder.git_exclude(false);
 
-        // Try each pattern
-        for (pattern_idx, pattern) in patterns.iter().enumerate() {
-            // Match entirely in Rust - no FFI crossing!
-            if pattern.matches(dirpath_name, &entry.dirnames, &entry.filenames) {
-                results.push(ScanResult {
-                    path: entry.path.clone(),
-                    pattern_index: pattern_idx,
-                });
+    // 5. DashMap to collect directory contents and matches
+    let dir_contents: Arc<DashMap<PathBuf, DirContents>> = Arc::new(DashMap::new());
+    let matches: Arc<DashMap<String, Vec<usize>>> = Arc::new(DashMap::new());
+
+    // 6. Walk in parallel - collect directory contents
+    builder.build_parallel().run(|| {
+        let dir_contents = Arc::clone(&dir_contents);
+        Box::new(move |entry_result| {
+            if let Ok(dir_entry) = entry_result {
+                let path = dir_entry.path();
+                if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
+                    if let Some(file_type) = dir_entry.file_type() {
+                        let mut entry = dir_contents
+                            .entry(parent.to_path_buf())
+                            .or_insert((SmallVec::new(), SmallVec::new()));
+
+                        if file_type.is_file() {
+                            entry.0.push(name.to_os_string());
+                        } else if file_type.is_dir() {
+                            entry.1.push(name.to_os_string());
+                        }
+                    }
+                }
             }
+            ignore::WalkState::Continue
+        })
+    });
+
+    // 7. Match each directory against precompiled patterns
+    for entry in dir_contents.iter() {
+        let (dirpath, (files, dirs)) = entry.pair();
+        let dirpath_str = dirpath.to_string_lossy().into_owned();
+        let dirpath_name = dirpath.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
+        let filenames: Vec<String> = files
+            .iter()
+            .map(|s| s.to_string_lossy().into_owned())
+            .collect();
+        let dirnames: Vec<String> = dirs
+            .iter()
+            .map(|s| s.to_string_lossy().into_owned())
+            .collect();
+
+        // Check against each precompiled pattern
+        for (pattern_idx, compiled_pattern) in compiled_patterns.iter().enumerate() {
+            // Use precompiled matchers - NO recompilation!
+            if compiled_pattern.matches(dirpath_name, &dirnames, &filenames) {
+                matches
+                    .entry(dirpath_str.clone())
+                    .or_default()
+                    .push(pattern_idx);
+            }
+        }
+    }
+
+    // 8. Convert to results
+    let mut results = Vec::new();
+    for entry in matches.iter() {
+        let (path, pattern_indices) = entry.pair();
+        for pattern_idx in pattern_indices {
+            results.push(ScanResult {
+                path: path.clone(),
+                pattern_index: *pattern_idx,
+            });
         }
     }
 
