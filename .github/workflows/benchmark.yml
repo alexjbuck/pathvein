@@ -14,10 +14,6 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        backend: [rust, python]
-
     steps:
       - uses: actions/checkout@v4
 
@@ -26,8 +22,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Set up Rust (for Rust backend)
-        if: matrix.backend == 'rust'
+      - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install dependencies
@@ -35,39 +30,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-benchmark
 
-      - name: Install pathvein (Rust backend)
-        if: matrix.backend == 'rust'
+      - name: Install pathvein with Rust backend
         run: |
           pip install -e .
-
-      - name: Install pathvein (Python backend)
-        if: matrix.backend == 'python'
-        run: |
-          # Install dependencies manually
-          pip install pydantic typing-extensions
-          # Copy Python source without compiling Rust
-          SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
-          mkdir -p "$SITE_PACKAGES/pathvein"
-          cp -r src/pathvein/* "$SITE_PACKAGES/pathvein/"
 
       - name: Verify backend
         run: |
           python -c "from pathvein._backend import get_backend_info; import json; print(json.dumps(get_backend_info(), indent=2))"
 
-      - name: Run pytest-benchmark
+      - name: Run 3-way benchmark comparison
         run: |
           pytest bench/test_benchmark.py \
             -o addopts="" \
             --benchmark-only \
-            --benchmark-json=benchmark_${{ matrix.backend }}.json \
+            --benchmark-json=benchmark_results.json \
             --benchmark-warmup=on \
             --benchmark-min-rounds=5
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ matrix.backend }}
-          path: benchmark_${{ matrix.backend }}.json
+          name: benchmark-results
+          path: benchmark_results.json
 
   compare:
     needs: benchmark
@@ -80,22 +64,16 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Download Rust benchmark
+      - name: Download benchmark results
         uses: actions/download-artifact@v4
         with:
-          name: benchmark-results-rust
+          name: benchmark-results
 
-      - name: Download Python benchmark
-        uses: actions/download-artifact@v4
-        with:
-          name: benchmark-results-python
-
-      - name: Compare benchmarks
+      - name: Generate comparison report
         id: compare
         run: |
           python bench/compare_benchmark_results.py \
-            benchmark_rust.json \
-            benchmark_python.json \
+            benchmark_results.json \
             --output-markdown=comparison.md
 
       - name: Comment PR with results
@@ -145,5 +123,4 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p bench/baselines
-          cp benchmark_rust.json bench/baselines/baseline_rust_$(date +%Y%m%d).json
-          cp benchmark_python.json bench/baselines/baseline_python_$(date +%Y%m%d).json
+          cp benchmark_results.json bench/baselines/baseline_$(date +%Y%m%d).json
