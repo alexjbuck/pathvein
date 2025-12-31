@@ -82,6 +82,66 @@ def temp_dir_structure():
 
 
 @pytest.fixture(scope="session")
+def small_dir_structure():
+    """Create a SMALL test directory structure.
+
+    Size: ~140 files, ~30 directories across 3 levels
+    Simulates: A small project or library
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+
+        def create_tree(parent: Path, depth: int, max_depth: int = 2):
+            if depth > max_depth:
+                return
+
+            # Create 10 files per directory
+            for i in range(10):
+                ext = ["txt", "py", "rs", "md", "json"][i % 5]
+                (parent / f"file_{depth}_{i}.{ext}").touch()
+
+            # Create 3 subdirectories per level
+            if depth < max_depth:
+                for i in range(3):
+                    subdir = parent / f"subdir_{depth}_{i}"
+                    subdir.mkdir()
+                    create_tree(subdir, depth + 1, max_depth)
+
+        create_tree(root, 0)
+        yield root
+
+
+@pytest.fixture(scope="session")
+def large_dir_structure():
+    """Create a LARGE test directory structure.
+
+    Size: ~31,250 files, ~1,562 directories across 6 levels
+    Simulates: A large monorepo or comprehensive codebase
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+
+        def create_tree(parent: Path, depth: int, max_depth: int = 4):
+            if depth > max_depth:
+                return
+
+            # Create 25 files per directory
+            for i in range(25):
+                ext = ["txt", "py", "rs", "md", "json", "yaml", "toml", "sh"][i % 8]
+                (parent / f"file_{depth}_{i}.{ext}").touch()
+
+            # Create 5 subdirectories per level
+            if depth < max_depth:
+                for i in range(5):
+                    subdir = parent / f"subdir_{depth}_{i}"
+                    subdir.mkdir()
+                    create_tree(subdir, depth + 1, max_depth)
+
+        create_tree(root, 0)
+        yield root
+
+
+@pytest.fixture(scope="session")
 def test_filenames():
     """Generate 1000 test filenames for pattern matching benchmarks."""
     filenames = []
@@ -222,6 +282,277 @@ class TestAPIBenchmarks:
         ]
 
         result = benchmark(lambda: scan(temp_dir_structure, patterns))
+        assert len(result) >= 0
+
+    # -------------------------------------------------------------------------
+    # SCENARIO BENCHMARKS - Test size & pattern complexity impact
+    # -------------------------------------------------------------------------
+
+    # Scenario 1: Small directory (~140 files), 1 simple pattern
+    def test_api_scenario1_small_simple_1_pure_python(
+        self, benchmark, small_dir_structure
+    ):
+        """Scenario 1a: Small dir + 1 pattern - Pure Python."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [FileStructurePattern().add_file("*.py")]
+
+        def pure_python_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(small_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(pure_python_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario1_small_simple_2_hybrid(self, benchmark, small_dir_structure):
+        """Scenario 1b: Small dir + 1 pattern - Hybrid."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [FileStructurePattern().add_file("*.py")]
+
+        def hybrid_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(small_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(hybrid_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario1_small_simple_3_pure_rust(
+        self, benchmark, small_dir_structure
+    ):
+        """Scenario 1c: Small dir + 1 pattern - Pure Rust."""
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        patterns = [FileStructurePattern().add_file("*.py")]
+        result = benchmark(lambda: scan(small_dir_structure, patterns))
+        assert len(result) >= 0
+
+    # Scenario 2: Small directory (~140 files), many patterns
+    def test_api_scenario2_small_many_1_pure_python(
+        self, benchmark, small_dir_structure
+    ):
+        """Scenario 2a: Small dir + many patterns - Pure Python."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [
+            FileStructurePattern().add_file("*.py"),
+            FileStructurePattern().add_file("*.rs"),
+            FileStructurePattern().add_file("*.md"),
+            FileStructurePattern().add_file("*.txt"),
+            FileStructurePattern().add_file("*.json"),
+            FileStructurePattern().add_file("*.yaml"),
+            FileStructurePattern().add_file("*.toml"),
+            FileStructurePattern().add_file("*.sh"),
+        ]
+
+        def pure_python_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(small_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(pure_python_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario2_small_many_2_hybrid(self, benchmark, small_dir_structure):
+        """Scenario 2b: Small dir + many patterns - Hybrid."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [
+            FileStructurePattern().add_file("*.py"),
+            FileStructurePattern().add_file("*.rs"),
+            FileStructurePattern().add_file("*.md"),
+            FileStructurePattern().add_file("*.txt"),
+            FileStructurePattern().add_file("*.json"),
+            FileStructurePattern().add_file("*.yaml"),
+            FileStructurePattern().add_file("*.toml"),
+            FileStructurePattern().add_file("*.sh"),
+        ]
+
+        def hybrid_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(small_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(hybrid_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario2_small_many_3_pure_rust(self, benchmark, small_dir_structure):
+        """Scenario 2c: Small dir + many patterns - Pure Rust."""
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        patterns = [
+            FileStructurePattern().add_file("*.py"),
+            FileStructurePattern().add_file("*.rs"),
+            FileStructurePattern().add_file("*.md"),
+            FileStructurePattern().add_file("*.txt"),
+            FileStructurePattern().add_file("*.json"),
+            FileStructurePattern().add_file("*.yaml"),
+            FileStructurePattern().add_file("*.toml"),
+            FileStructurePattern().add_file("*.sh"),
+        ]
+
+        result = benchmark(lambda: scan(small_dir_structure, patterns))
+        assert len(result) >= 0
+
+    # Scenario 3: Large directory (~31,250 files), 1 simple pattern
+    def test_api_scenario3_large_simple_1_pure_python(
+        self, benchmark, large_dir_structure
+    ):
+        """Scenario 3a: Large dir + 1 pattern - Pure Python."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [FileStructurePattern().add_file("*.py")]
+
+        def pure_python_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(large_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(pure_python_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario3_large_simple_2_hybrid(self, benchmark, large_dir_structure):
+        """Scenario 3b: Large dir + 1 pattern - Hybrid."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [FileStructurePattern().add_file("*.py")]
+
+        def hybrid_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(large_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(hybrid_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario3_large_simple_3_pure_rust(
+        self, benchmark, large_dir_structure
+    ):
+        """Scenario 3c: Large dir + 1 pattern - Pure Rust."""
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        patterns = [FileStructurePattern().add_file("*.py")]
+        result = benchmark(lambda: scan(large_dir_structure, patterns))
+        assert len(result) >= 0
+
+    # Scenario 4: Large directory (~31,250 files), many patterns with complexity
+    def test_api_scenario4_large_complex_1_pure_python(
+        self, benchmark, large_dir_structure
+    ):
+        """Scenario 4a: Large dir + complex patterns - Pure Python."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [
+            FileStructurePattern().add_file("*.py").add_file("*.rs"),
+            FileStructurePattern().add_file("*.md").add_file("*.txt", is_optional=True),
+            FileStructurePattern().add_file("*.json"),
+            FileStructurePattern()
+            .add_file("*.yaml")
+            .add_file("*.toml", is_optional=True),
+            FileStructurePattern().add_file("*.sh"),
+        ]
+
+        def pure_python_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(large_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(pure_python_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario4_large_complex_2_hybrid(self, benchmark, large_dir_structure):
+        """Scenario 4b: Large dir + complex patterns - Hybrid."""
+        from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
+
+        patterns = [
+            FileStructurePattern().add_file("*.py").add_file("*.rs"),
+            FileStructurePattern().add_file("*.md").add_file("*.txt", is_optional=True),
+            FileStructurePattern().add_file("*.json"),
+            FileStructurePattern()
+            .add_file("*.yaml")
+            .add_file("*.toml", is_optional=True),
+            FileStructurePattern().add_file("*.sh"),
+        ]
+
+        def hybrid_scan():
+            matches = set()
+            for dirpath, dirnames, filenames in os.walk(large_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(hybrid_scan)
+        assert len(result) >= 0
+
+    def test_api_scenario4_large_complex_3_pure_rust(
+        self, benchmark, large_dir_structure
+    ):
+        """Scenario 4c: Large dir + complex patterns - Pure Rust."""
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        patterns = [
+            FileStructurePattern().add_file("*.py").add_file("*.rs"),
+            FileStructurePattern().add_file("*.md").add_file("*.txt", is_optional=True),
+            FileStructurePattern().add_file("*.json"),
+            FileStructurePattern()
+            .add_file("*.yaml")
+            .add_file("*.toml", is_optional=True),
+            FileStructurePattern().add_file("*.sh"),
+        ]
+
+        result = benchmark(lambda: scan(large_dir_structure, patterns))
         assert len(result) >= 0
 
     # -------------------------------------------------------------------------
