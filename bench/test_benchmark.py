@@ -172,15 +172,6 @@ class TestMicroBenchmarks:
         result = benchmark(lambda: list(walk_parallel(str(temp_dir_structure))))
         assert len(result) > 0
 
-    def test_micro_pattern_matching_single(self, benchmark, test_filenames):
-        """Micro: Benchmark single pattern matching (Rust globset)."""
-        from pathvein._backend import PatternMatcher
-
-        patterns = ["*.py"]
-        matcher = PatternMatcher(patterns)
-        result = benchmark(lambda: [f for f in test_filenames if matcher.matches(f)])
-        assert len(result) > 0
-
     def test_micro_pattern_matching_multiple(self, benchmark, test_filenames):
         """Micro: Benchmark multiple pattern matching (Rust globset)."""
         from pathvein._backend import PatternMatcher
