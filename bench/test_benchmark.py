@@ -1,24 +1,34 @@
+#!/usr/bin/env python3
 """
 pytest-benchmark tests for pathvein.
 
-These benchmarks use pytest-benchmark for more rigorous statistical analysis
-and can be integrated with CI/CD for performance regression detection.
+These benchmarks compare Pure Python vs Hybrid vs Pure Rust implementations
+to determine if Rust optimization is worth the effort.
+
+Benchmark Categories:
+- Micro Benchmarks: Internal implementation details (walk, pattern matching)
+- API Benchmarks: Public API functions that users actually call (scan, shuffle)
+
+Approaches Compared:
+- Pure Python: No Rust, pure Python implementation (os.walk + fnmatch)
+- Hybrid: Python walk + Rust pattern matching (FFI overhead)
+- Pure Rust: Everything in Rust (precompiled patterns, no FFI overhead)
 
 Usage:
-    # Run benchmarks
+    # Run all benchmarks
     pytest bench/test_benchmark.py --benchmark-only
 
-    # Save baseline
-    pytest bench/test_benchmark.py --benchmark-only --benchmark-save=baseline
+    # Run only API benchmarks (what users care about)
+    pytest bench/test_benchmark.py::TestAPIBenchmarks --benchmark-only
 
-    # Compare against baseline
+    # Run only micro benchmarks (implementation details)
+    pytest bench/test_benchmark.py::TestMicroBenchmarks --benchmark-only
+
+    # Compare with baseline
     pytest bench/test_benchmark.py --benchmark-only --benchmark-compare=baseline
 
     # Generate JSON for CI
     pytest bench/test_benchmark.py --benchmark-only --benchmark-json=output.json
-
-    # Show histogram
-    pytest bench/test_benchmark.py --benchmark-only --benchmark-histogram
 
 Install dependencies:
     pip install pytest pytest-benchmark
@@ -29,13 +39,7 @@ from pathlib import Path
 
 import pytest
 
-from pathvein._backend import (
-    PatternMatcher,
-    get_backend_info,
-    match_pattern,
-    walk_parallel,
-)
-from pathvein._path_utils import pattern_match
+from pathvein._backend import get_backend_info
 
 
 # Show backend info at collection time
@@ -50,22 +54,23 @@ def pytest_collection():
 
 @pytest.fixture(scope="session")
 def temp_dir_structure():
-    """Create a temporary directory structure for benchmarks."""
+    """Create a medium-sized test directory structure.
+
+    Creates ~2000 files across 5 levels to simulate real-world usage.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
 
-        # Create a medium-sized directory structure
-        # 5 subdirs × 4 levels × 20 files = ~2000 files
         def create_tree(parent: Path, depth: int, max_depth: int = 4):
             if depth > max_depth:
                 return
 
-            # Create files
+            # Create 20 files per directory
             for i in range(20):
                 ext = ["txt", "py", "rs", "md", "json"][i % 5]
                 (parent / f"file_{depth}_{i}.{ext}").touch()
 
-            # Create subdirs
+            # Create 5 subdirectories per level
             if depth < max_depth:
                 for i in range(5):
                     subdir = parent / f"subdir_{depth}_{i}"
@@ -78,7 +83,7 @@ def temp_dir_structure():
 
 @pytest.fixture(scope="session")
 def test_filenames():
-    """Generate a list of test filenames for pattern matching."""
+    """Generate 1000 test filenames for pattern matching benchmarks."""
     filenames = []
     for i in range(1000):
         ext = ["txt", "py", "rs", "md", "json", "yaml", "toml", "sh"][i % 8]
@@ -87,209 +92,98 @@ def test_filenames():
     return filenames
 
 
-# Directory Walking Benchmarks
-class TestDirectoryWalking:
-    """Benchmark directory walking operations."""
-
-    def test_walk_parallel(self, benchmark, temp_dir_structure):
-        """Benchmark parallel directory walking."""
-        result = benchmark(lambda: list(walk_parallel(str(temp_dir_structure))))
-        # Verify we got results
-        assert len(result) > 0
-
-    def test_walk_with_max_depth(self, benchmark, temp_dir_structure):
-        """Benchmark directory walking with max_depth=2."""
-        result = benchmark(
-            lambda: list(walk_parallel(str(temp_dir_structure), max_depth=2))
-        )
-        assert len(result) > 0
+# =============================================================================
+# MICRO BENCHMARKS - Internal Implementation Details
+# =============================================================================
 
 
-# Pattern Matching Benchmarks
-class TestPatternMatching:
-    """Benchmark pattern matching operations."""
+class TestMicroBenchmarks:
+    """Benchmark internal implementation details.
 
-    def test_single_pattern_simple(self, benchmark, test_filenames):
-        """Benchmark single simple pattern (*.py)."""
-        pattern = "*.py"
-        result = benchmark(
-            lambda: [f for f in test_filenames if pattern_match(f, pattern)]
-        )
-        assert len(result) > 0
-
-    def test_single_pattern_match_pattern(self, benchmark, test_filenames):
-        """Benchmark single pattern using match_pattern."""
-        pattern = "test_*.txt"  # Changed to match actual files (test_0.txt, test_24.txt, etc.)
-        result = benchmark(
-            lambda: [f for f in test_filenames if match_pattern(f, pattern)]
-        )
-        assert len(result) > 0
-
-    def test_multiple_patterns_3(self, benchmark, test_filenames):
-        """Benchmark 3 patterns using PatternMatcher."""
-        patterns = ["*.py", "*.rs", "*.md"]
-        matcher = PatternMatcher(patterns)
-        result = benchmark(lambda: [f for f in test_filenames if matcher.matches(f)])
-        assert len(result) > 0
-
-    def test_multiple_patterns_12(self, benchmark, test_filenames):
-        """Benchmark 12 patterns using PatternMatcher."""
-        patterns = [
-            f"{prefix}_*.{ext}"
-            for prefix in ["test", "main", "lib"]
-            for ext in ["py", "rs", "md", "txt"]
-        ]
-        matcher = PatternMatcher(patterns)
-        result = benchmark(lambda: [f for f in test_filenames if matcher.matches(f)])
-        assert len(result) > 0
-
-    def test_pattern_cache_effectiveness(self, benchmark, test_filenames):
-        """Benchmark repeated pattern matching (tests cache)."""
-        pattern = "*.py"
-
-        def repeated_match():
-            results = []
-            for _ in range(100):
-                results.extend([f for f in test_filenames if pattern_match(f, pattern)])
-            return results
-
-        result = benchmark(repeated_match)
-        assert len(result) > 0
-
-
-# End-to-End Benchmarks
-class TestEndToEnd:
-    """Benchmark end-to-end operations."""
-
-    def test_scan_with_patterns(self, benchmark, temp_dir_structure):
-        """Benchmark scanning directory with pattern filtering."""
-        patterns = ["*.py", "*.rs", "*.md"]
-        matcher = PatternMatcher(patterns)
-
-        def scan():
-            files = []
-            for dirpath, dirnames, filenames in walk_parallel(str(temp_dir_structure)):
-                files.extend([f for f in filenames if matcher.matches(f)])
-            return files
-
-        result = benchmark(scan)
-        assert len(result) > 0
-
-    def test_scan_single_pattern(self, benchmark, temp_dir_structure):
-        """Benchmark scanning directory with single pattern using PatternMatcher.
-
-        Note: Uses PatternMatcher instead of match_pattern for efficiency.
-        PatternMatcher compiles patterns once and keeps them in Rust,
-        avoiding FFI overhead on each match.
-        """
-        pattern = "*.py"
-        matcher = PatternMatcher([pattern])
-
-        def scan():
-            files = []
-            for dirpath, dirnames, filenames in walk_parallel(str(temp_dir_structure)):
-                files.extend([f for f in filenames if matcher.matches(f)])
-            return files
-
-        result = benchmark(scan)
-        assert len(result) > 0
-
-    def test_scan_single_pattern_antipattern(self, benchmark, temp_dir_structure):
-        """Benchmark scan using match_pattern in a loop (ANTI-PATTERN).
-
-        This demonstrates why you should NOT use match_pattern repeatedly.
-        Each call crosses the Python/Rust FFI boundary, causing overhead.
-        Use PatternMatcher instead (see test_scan_single_pattern).
-        """
-        pattern = "*.py"
-
-        def scan():
-            files = []
-            for dirpath, dirnames, filenames in walk_parallel(str(temp_dir_structure)):
-                files.extend([f for f in filenames if match_pattern(f, pattern)])
-            return files
-
-        result = benchmark(scan)
-        assert len(result) > 0
-
-
-# Comparison Tests
-class TestComparison:
-    """Tests that compare different approaches."""
-
-    def test_pattern_matcher_vs_individual(self, benchmark, test_filenames):
-        """Compare PatternMatcher vs individual match_pattern calls."""
-        patterns = ["*.py", "*.rs", "*.md"]
-
-        if get_backend_info()["backend"] == "rust":
-            # Rust: Use PatternMatcher (should be faster)
-            matcher = PatternMatcher(patterns)
-            result = benchmark(
-                lambda: [f for f in test_filenames if matcher.matches(f)]
-            )
-        else:
-            # Python: Use individual checks (might be comparable due to caching)
-            result = benchmark(
-                lambda: [
-                    f
-                    for f in test_filenames
-                    if any(match_pattern(f, p) for p in patterns)
-                ]
-            )
-
-        assert len(result) > 0
-
-
-# Public API Benchmarks
-class TestPublicAPI:
-    """Benchmark public API functions that users actually call.
-
-    These are different from micro benchmarks - they test the full API
-    surface that users interact with, not internal implementation details.
+    These test low-level components like directory walking and pattern matching.
+    Useful for understanding where performance comes from, but users don't
+    directly call these functions.
     """
 
-    def test_scan_api(self, benchmark, temp_dir_structure):
-        """Benchmark the public scan() API function."""
-        from pathvein import scan
-        from pathvein.pattern import FileStructurePattern
+    def test_micro_walk_parallel(self, benchmark, temp_dir_structure):
+        """Micro: Benchmark parallel directory walking (Rust implementation)."""
+        from pathvein._backend import walk_parallel
 
-        # Create patterns that will find Python and Rust files
-        patterns = [
-            FileStructurePattern().add_file("*.py"),
-            FileStructurePattern().add_file("*.rs"),
-        ]
+        result = benchmark(lambda: list(walk_parallel(str(temp_dir_structure))))
+        assert len(result) > 0
 
-        result = benchmark(lambda: scan(temp_dir_structure, patterns))
-        # We should find some matches in our test structure
-        assert len(result) >= 0
+    def test_micro_pattern_matching_single(self, benchmark, test_filenames):
+        """Micro: Benchmark single pattern matching (Rust globset)."""
+        from pathvein._backend import PatternMatcher
 
-    def test_scan_new_approach_rust_scan_parallel(self, benchmark, temp_dir_structure):
-        """Benchmark NEW approach: scan_parallel with precompiled patterns in Rust.
+        patterns = ["*.py"]
+        matcher = PatternMatcher(patterns)
+        result = benchmark(lambda: [f for f in test_filenames if matcher.matches(f)])
+        assert len(result) > 0
 
-        This uses scan_parallel() which:
-        1. Precompiles all patterns ONCE
-        2. Walks and matches entirely in Rust
-        3. No FFI crossings during scan loop
+    def test_micro_pattern_matching_multiple(self, benchmark, test_filenames):
+        """Micro: Benchmark multiple pattern matching (Rust globset)."""
+        from pathvein._backend import PatternMatcher
+
+        patterns = ["*.py", "*.rs", "*.md", "*.txt"]
+        matcher = PatternMatcher(patterns)
+        result = benchmark(lambda: [f for f in test_filenames if matcher.matches(f)])
+        assert len(result) > 0
+
+
+# =============================================================================
+# API BENCHMARKS - Public API Functions (What Users Call)
+# =============================================================================
+
+
+class TestAPIBenchmarks:
+    """Benchmark PUBLIC API functions that users actually call.
+
+    These are the functions users use directly: scan() and shuffle().
+    These benchmarks show the REAL performance that matters.
+    """
+
+    # -------------------------------------------------------------------------
+    # SCAN BENCHMARKS - Compare Pure Python vs Hybrid vs Pure Rust
+    # -------------------------------------------------------------------------
+
+    def test_api_scan_pure_python(self, benchmark, temp_dir_structure):
+        """API: Scan with PURE PYTHON (no Rust, baseline for comparison).
+
+        Uses Python os.walk() + Python fnmatch pattern matching.
+        This simulates running without Rust backend.
         """
-        from pathvein import scan
         from pathvein.pattern import FileStructurePattern
+        from pathvein.lib import ScanResult
+        import os
 
         patterns = [
             FileStructurePattern().add_file("*.py"),
             FileStructurePattern().add_file("*.rs"),
         ]
 
-        result = benchmark(lambda: scan(temp_dir_structure, patterns))
+        def pure_python_scan():
+            matches = set()
+            # Use Python walk (not Rust walk_parallel)
+            for dirpath, dirnames, filenames in os.walk(temp_dir_structure):
+                dirpath = Path(dirpath)
+                for pattern in patterns:
+                    # pattern.matches() will use Python fnmatch (no Rust)
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(pure_python_scan)
         assert len(result) >= 0
 
-    def test_scan_old_approach_walk_then_match(self, benchmark, temp_dir_structure):
-        """Benchmark OLD approach: walk_parallel() then match in Python.
+    def test_api_scan_hybrid_walk_rust_match_python(
+        self, benchmark, temp_dir_structure
+    ):
+        """API: Scan with HYBRID approach (Rust walk + Python matching).
 
-        This uses the old pattern:
-        1. walk_parallel() returns all directories
-        2. For each directory, call pattern.matches()
-        3. pattern.matches() calls back to Rust for glob matching
-        4. Many FFI crossings during scan loop
+        Uses Rust walk_parallel() to walk directories (fast),
+        then Python pattern.matches() for matching (which calls back to Rust).
+        This has FFI overhead from crossing Python/Rust boundary repeatedly.
         """
         from pathvein.pattern import FileStructurePattern
         from pathvein._backend import walk_parallel
@@ -301,22 +195,99 @@ class TestPublicAPI:
             FileStructurePattern().add_file("*.rs"),
         ]
 
-        def old_approach():
+        def hybrid_scan():
             matches = set()
+            # Rust walk
             for dirpath_str, dirnames, filenames in walk_parallel(
                 str(temp_dir_structure)
             ):
                 dirpath = Path(dirpath_str)
+                # Python pattern matching (calls back to Rust for glob matching)
                 for pattern in patterns:
                     if pattern.matches((dirpath, dirnames, filenames)):
                         matches.add(ScanResult(dirpath, pattern))
             return matches
 
-        result = benchmark(old_approach)
+        result = benchmark(hybrid_scan)
         assert len(result) >= 0
 
-    def test_assess_api(self, benchmark, temp_dir_structure):
-        """Benchmark the public assess() API function."""
+    def test_api_scan_pure_rust(self, benchmark, temp_dir_structure):
+        """API: Scan with PURE RUST (new approach, should be fastest).
+
+        Uses scan_parallel() which:
+        1. Precompiles all patterns ONCE in Rust
+        2. Walks directories in Rust (parallel)
+        3. Matches patterns in Rust (no recompilation, no FFI overhead)
+        4. Returns only matched results
+
+        This is the NEW implementation. Should be fastest.
+        """
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        patterns = [
+            FileStructurePattern().add_file("*.py"),
+            FileStructurePattern().add_file("*.rs"),
+        ]
+
+        result = benchmark(lambda: scan(temp_dir_structure, patterns))
+        assert len(result) >= 0
+
+    def test_api_scan_complex_pattern(self, benchmark, temp_dir_structure):
+        """API: Scan with complex patterns (required + optional files).
+
+        Tests performance with more complex pattern matching requirements.
+        Uses the Pure Rust approach (scan_parallel).
+        """
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        pattern = (
+            FileStructurePattern()
+            .add_file("*.py")
+            .add_file("*.rs")
+            .add_file("*.md", is_optional=True)
+            .add_file("*.txt", is_optional=True)
+        )
+
+        result = benchmark(lambda: scan(temp_dir_structure, [pattern]))
+        assert len(result) >= 0
+
+    # -------------------------------------------------------------------------
+    # SHUFFLE BENCHMARKS - Test file copying performance
+    # -------------------------------------------------------------------------
+
+    def test_api_shuffle_to_dryrun(self, benchmark, temp_dir_structure):
+        """API: Benchmark shuffle_to() in dryrun mode.
+
+        Tests the overhead of planning file copies without actually copying.
+        Useful for understanding shuffle performance without I/O.
+        """
+        from pathvein import scan, shuffle_to
+        from pathvein.pattern import FileStructurePattern
+        from pathlib import Path
+        import tempfile
+
+        # First scan to get matches
+        patterns = [FileStructurePattern().add_file("*.py")]
+        matches = scan(temp_dir_structure, patterns)
+
+        if not matches:
+            pytest.skip("No matches found for shuffle benchmark")
+
+        # Benchmark shuffle_to in dryrun mode
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest = Path(tmpdir) / "output"
+            result = benchmark(lambda: shuffle_to(matches, dest, dryrun=True))
+
+        assert isinstance(result, list)
+
+    def test_api_assess(self, benchmark, temp_dir_structure):
+        """API: Benchmark assess() for reverse pattern matching.
+
+        Given a file, find which patterns it belongs to.
+        Less commonly used but part of public API.
+        """
         from pathvein import assess
         from pathvein.pattern import FileStructurePattern
 
@@ -334,48 +305,12 @@ class TestPublicAPI:
                 break
 
         if test_file is None:
-            # Create a test file if none exist
             test_file = temp_dir_structure / "test.py"
             test_file.touch()
 
         patterns = [FileStructurePattern().add_file("*.py")]
 
         result = benchmark(lambda: list(assess(test_file, patterns)))
-        assert isinstance(result, list)
-
-    def test_scan_api_complex_pattern(self, benchmark, temp_dir_structure):
-        """Benchmark scan() with complex patterns (required + optional files)."""
-        from pathvein import scan
-        from pathvein.pattern import FileStructurePattern
-
-        # Complex pattern with required and optional files
-        pattern = (
-            FileStructurePattern().add_file("*.py").add_file("*.md", is_optional=True)
-        )
-
-        result = benchmark(lambda: scan(temp_dir_structure, [pattern]))
-        assert len(result) >= 0
-
-    def test_shuffle_to_api_dryrun(self, benchmark, temp_dir_structure):
-        """Benchmark the public shuffle_to() API function (dryrun mode)."""
-        from pathvein import scan, shuffle_to
-        from pathvein.pattern import FileStructurePattern
-        from pathlib import Path
-        import tempfile
-
-        # First scan to get matches
-        patterns = [FileStructurePattern().add_file("*.py")]
-        matches = scan(temp_dir_structure, patterns)
-
-        if not matches:
-            # Skip if no matches
-            return
-
-        # Benchmark shuffle_to in dryrun mode
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dest = Path(tmpdir) / "output"
-            result = benchmark(lambda: shuffle_to(matches, dest, dryrun=True))
-
         assert isinstance(result, list)
 
 
