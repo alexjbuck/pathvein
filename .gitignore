@@ -20,6 +20,9 @@ Cargo.lock
 
 # Benchmark results
 bench/*_results.json
+benchmark_results.json
+benchmark_*.json
+comparison.md
 
 # Documentation build artifacts
 /site/
