@@ -145,13 +145,14 @@ class TestAPIBenchmarks:
 
     # -------------------------------------------------------------------------
     # SCAN BENCHMARKS - Compare Pure Python vs Hybrid vs Pure Rust
+    # These 3 benchmarks are the MAIN comparison for "Is Rust worth it?"
     # -------------------------------------------------------------------------
 
-    def test_api_scan_pure_python(self, benchmark, temp_dir_structure):
-        """API: Scan with PURE PYTHON (no Rust, baseline for comparison).
+    def test_api_scan_1_pure_python(self, benchmark, temp_dir_structure):
+        """API: Scan approach #1 - PURE PYTHON (baseline).
 
-        Uses Python os.walk() + Python fnmatch pattern matching.
-        This simulates running without Rust backend.
+        os.walk() + Python fnmatch pattern matching.
+        No Rust, pure Python implementation.
         """
         from pathvein.pattern import FileStructurePattern
         from pathvein.lib import ScanResult
@@ -176,19 +177,16 @@ class TestAPIBenchmarks:
         result = benchmark(pure_python_scan)
         assert len(result) >= 0
 
-    def test_api_scan_hybrid_walk_rust_match_python(
-        self, benchmark, temp_dir_structure
-    ):
-        """API: Scan with HYBRID approach (Rust walk + Python matching).
+    def test_api_scan_2_hybrid(self, benchmark, temp_dir_structure):
+        """API: Scan approach #2 - HYBRID (Python os.walk + Rust matchers).
 
-        Uses Rust walk_parallel() to walk directories (fast),
-        then Python pattern.matches() for matching (which calls back to Rust).
-        This has FFI overhead from crossing Python/Rust boundary repeatedly.
+        Python's C-based os.walk() + Rust PatternMatcher for fast matching.
+        Tests if Rust pattern matching alone provides most of the benefit.
         """
         from pathvein.pattern import FileStructurePattern
-        from pathvein._backend import walk_parallel
         from pathvein.lib import ScanResult
         from pathlib import Path
+        import os
 
         patterns = [
             FileStructurePattern().add_file("*.py"),
@@ -197,12 +195,10 @@ class TestAPIBenchmarks:
 
         def hybrid_scan():
             matches = set()
-            # Rust walk
-            for dirpath_str, dirnames, filenames in walk_parallel(
-                str(temp_dir_structure)
-            ):
-                dirpath = Path(dirpath_str)
-                # Python pattern matching (calls back to Rust for glob matching)
+            # Python walk (C-based os.walk)
+            for dirpath, dirnames, filenames in os.walk(temp_dir_structure):
+                dirpath = Path(dirpath)
+                # Rust pattern matching (calls Rust PatternMatcher)
                 for pattern in patterns:
                     if pattern.matches((dirpath, dirnames, filenames)):
                         matches.add(ScanResult(dirpath, pattern))
@@ -211,16 +207,11 @@ class TestAPIBenchmarks:
         result = benchmark(hybrid_scan)
         assert len(result) >= 0
 
-    def test_api_scan_pure_rust(self, benchmark, temp_dir_structure):
-        """API: Scan with PURE RUST (new approach, should be fastest).
+    def test_api_scan_3_pure_rust(self, benchmark, temp_dir_structure):
+        """API: Scan approach #3 - PURE RUST (optimal).
 
-        Uses scan_parallel() which:
-        1. Precompiles all patterns ONCE in Rust
-        2. Walks directories in Rust (parallel)
-        3. Matches patterns in Rust (no recompilation, no FFI overhead)
-        4. Returns only matched results
-
-        This is the NEW implementation. Should be fastest.
+        Everything in Rust: precompiled patterns, parallel walk, matching.
+        Zero FFI crossings during scan loop. Should be fastest.
         """
         from pathvein import scan
         from pathvein.pattern import FileStructurePattern
@@ -233,11 +224,15 @@ class TestAPIBenchmarks:
         result = benchmark(lambda: scan(temp_dir_structure, patterns))
         assert len(result) >= 0
 
-    def test_api_scan_complex_pattern(self, benchmark, temp_dir_structure):
-        """API: Scan with complex patterns (required + optional files).
+    # -------------------------------------------------------------------------
+    # OTHER API BENCHMARKS - Different patterns/functions (NOT part of main comparison)
+    # -------------------------------------------------------------------------
 
-        Tests performance with more complex pattern matching requirements.
-        Uses the Pure Rust approach (scan_parallel).
+    def test_api_scan_complex_pattern(self, benchmark, temp_dir_structure):
+        """API: Scan with complex pattern (NOT part of 3-way comparison).
+
+        Tests pure Rust performance with more complex pattern requirements.
+        This is NOT a different approach - it's testing pattern complexity.
         """
         from pathvein import scan
         from pathvein.pattern import FileStructurePattern
