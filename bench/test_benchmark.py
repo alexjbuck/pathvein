@@ -263,6 +263,58 @@ class TestPublicAPI:
         # We should find some matches in our test structure
         assert len(result) >= 0
 
+    def test_scan_new_approach_rust_scan_parallel(self, benchmark, temp_dir_structure):
+        """Benchmark NEW approach: scan_parallel with precompiled patterns in Rust.
+
+        This uses scan_parallel() which:
+        1. Precompiles all patterns ONCE
+        2. Walks and matches entirely in Rust
+        3. No FFI crossings during scan loop
+        """
+        from pathvein import scan
+        from pathvein.pattern import FileStructurePattern
+
+        patterns = [
+            FileStructurePattern().add_file("*.py"),
+            FileStructurePattern().add_file("*.rs"),
+        ]
+
+        result = benchmark(lambda: scan(temp_dir_structure, patterns))
+        assert len(result) >= 0
+
+    def test_scan_old_approach_walk_then_match(self, benchmark, temp_dir_structure):
+        """Benchmark OLD approach: walk_parallel() then match in Python.
+
+        This uses the old pattern:
+        1. walk_parallel() returns all directories
+        2. For each directory, call pattern.matches()
+        3. pattern.matches() calls back to Rust for glob matching
+        4. Many FFI crossings during scan loop
+        """
+        from pathvein.pattern import FileStructurePattern
+        from pathvein._backend import walk_parallel
+        from pathvein.lib import ScanResult
+        from pathlib import Path
+
+        patterns = [
+            FileStructurePattern().add_file("*.py"),
+            FileStructurePattern().add_file("*.rs"),
+        ]
+
+        def old_approach():
+            matches = set()
+            for dirpath_str, dirnames, filenames in walk_parallel(
+                str(temp_dir_structure)
+            ):
+                dirpath = Path(dirpath_str)
+                for pattern in patterns:
+                    if pattern.matches((dirpath, dirnames, filenames)):
+                        matches.add(ScanResult(dirpath, pattern))
+            return matches
+
+        result = benchmark(old_approach)
+        assert len(result) >= 0
+
     def test_assess_api(self, benchmark, temp_dir_structure):
         """Benchmark the public assess() API function."""
         from pathvein import assess
