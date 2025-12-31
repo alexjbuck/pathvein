@@ -10,6 +10,7 @@ use std::sync::Mutex;
 /// This provides 3-5x faster pattern matching compared to Python's fnmatch
 /// by compiling all patterns once into an optimized DFA.
 #[pyclass]
+#[derive(Clone)]
 pub struct PatternMatcher {
     globset: GlobSet,
     patterns: Vec<String>,

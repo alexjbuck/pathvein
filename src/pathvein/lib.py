@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable, Generator, Iterable, List, NamedTuple, Set
 
 from ._path_utils import iterdir
-from ._backend import walk_parallel
+from ._backend import scan_parallel
 from ._path_utils import walk as walk_python
 from .pattern import FileStructurePattern
 
@@ -115,17 +115,15 @@ def scan(
 
     matches = set()
 
-    # Use Rust-backed walk_parallel ONLY for standard Path objects (local filesystem)
+    # Use Rust-backed scan_parallel for standard Path objects (local filesystem)
+    # This walks AND matches in Rust, avoiding FFI overhead
     # For cloud storage (UPath, S3Path, etc.), use Python walk() which supports any path-like object
     if type(source) is Path:
-        # Local filesystem - use Rust for performance
-        for dirpath_str, dirnames, filenames in walk_parallel(str(source)):
-            dirpath = Path(dirpath_str)
-            logger.debug("Walk: (%s, %s, %s)", dirpath, dirnames, filenames)
-            for pattern in pattern_list:
-                if pattern.matches((dirpath, dirnames, filenames)):
-                    logger.debug("Matched structure %s in %s", pattern, dirpath)
-                    matches.add(ScanResult(dirpath, pattern))
+        # Local filesystem - use Rust scan that walks and matches in one pass
+        results = scan_parallel(str(source), pattern_list)
+        for dirpath, pattern in results:
+            logger.debug("Matched structure %s in %s", pattern, dirpath)
+            matches.add(ScanResult(dirpath, pattern))
     else:
         # Cloud storage or other path-like objects - use Python walk()
         logger.debug("Using Python walk for non-local path: %s", type(source))
