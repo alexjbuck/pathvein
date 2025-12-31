@@ -147,10 +147,12 @@ def generate_markdown_comparison(data: Dict) -> str:
     }
 
     # Generate table for each scenario
-    lines.extend([
-        "| Scenario | Pure Python (ms) | Hybrid (ms) | Pure Rust (ms) | Rust vs Python | Status |",
-        "|----------|------------------|-------------|----------------|----------------|--------|",
-    ])
+    lines.extend(
+        [
+            "| Scenario | Pure Python (ms) | Hybrid (ms) | Pure Rust (ms) | Rust vs Python | Status |",
+            "|----------|------------------|-------------|----------------|----------------|--------|",
+        ]
+    )
 
     for scenario_num in [1, 2, 3, 4]:
         scenario_data = scenarios[scenario_num]
@@ -188,11 +190,13 @@ def generate_markdown_comparison(data: Dict) -> str:
             f"| **{scenario_num}**: {desc} | {pp_ms:.1f} | {hybrid_ms:.1f} | {rust_ms:.1f} | {speedup:.2f}x | {status} |"
         )
 
-    lines.extend([
-        "",
-        "### Summary",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "### Summary",
+            "",
+        ]
+    )
 
     # Calculate average speedup across all scenarios
     total_speedup = 0
@@ -207,14 +211,20 @@ def generate_markdown_comparison(data: Dict) -> str:
 
     if count > 0:
         avg_speedup = total_speedup / count
-        lines.append(f"- **Average Rust speedup**: {avg_speedup:.2f}x across {count} scenarios")
+        lines.append(
+            f"- **Average Rust speedup**: {avg_speedup:.2f}x across {count} scenarios"
+        )
 
         if avg_speedup >= 2.0:
             verdict = "🎉 **Pure Rust is definitely worth it!** Consistent ≥2x speedup."
         elif avg_speedup >= 1.5:
-            verdict = "✅ **Pure Rust provides significant speedup** across all scenarios."
+            verdict = (
+                "✅ **Pure Rust provides significant speedup** across all scenarios."
+            )
         elif avg_speedup >= 1.2:
-            verdict = "👍 **Pure Rust provides moderate improvement** across all scenarios."
+            verdict = (
+                "👍 **Pure Rust provides moderate improvement** across all scenarios."
+            )
         else:
             verdict = "⚠️ **Pure Rust provides minimal benefit** - consider complexity trade-offs."
 
@@ -224,14 +234,16 @@ def generate_markdown_comparison(data: Dict) -> str:
 
     # Micro benchmarks section
     if micro_benchmarks:
-        lines.extend([
-            "## Micro Benchmarks",
-            "",
-            "Low-level component benchmarks:",
-            "",
-            "| Benchmark | Time (ms) | Description |",
-            "|-----------|-----------|-------------|",
-        ])
+        lines.extend(
+            [
+                "## Micro Benchmarks",
+                "",
+                "Low-level component benchmarks:",
+                "",
+                "| Benchmark | Time (ms) | Description |",
+                "|-----------|-----------|-------------|",
+            ]
+        )
 
         for name, bench in sorted(micro_benchmarks, key=lambda x: x[1]["mean"]):
             time_ms = bench["mean"] * 1000
@@ -252,12 +264,14 @@ def generate_markdown_comparison(data: Dict) -> str:
 
     # Other API benchmarks section
     if api_benchmarks:
-        lines.extend([
-            "## Other API Benchmarks",
-            "",
-            "| Benchmark | Time (ms) |",
-            "|-----------|-----------|",
-        ])
+        lines.extend(
+            [
+                "## Other API Benchmarks",
+                "",
+                "| Benchmark | Time (ms) |",
+                "|-----------|-----------|",
+            ]
+        )
 
         for name, bench in sorted(api_benchmarks, key=lambda x: x[1]["mean"]):
             time_ms = bench["mean"] * 1000
@@ -266,19 +280,21 @@ def generate_markdown_comparison(data: Dict) -> str:
 
         lines.append("")
 
-    lines.extend([
-        "### Legend",
-        "",
-        "- 🚀 Excellent speedup (≥2.0x)",
-        "- ⚡ Good speedup (≥1.5x)",
-        "- 👍 Moderate speedup (≥1.2x)",
-        "- ➖ Comparable (0.8-1.2x)",
-        "- 🐌 Slower (investigation needed)",
-        "",
-        "---",
-        "",
-        "*Benchmarks run with pytest-benchmark. Lower time is better.*",
-    ])
+    lines.extend(
+        [
+            "### Legend",
+            "",
+            "- 🚀 Excellent speedup (≥2.0x)",
+            "- ⚡ Good speedup (≥1.5x)",
+            "- 👍 Moderate speedup (≥1.2x)",
+            "- ➖ Comparable (0.8-1.2x)",
+            "- 🐌 Slower (investigation needed)",
+            "",
+            "---",
+            "",
+            "*Benchmarks run with pytest-benchmark. Lower time is better.*",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -334,20 +350,24 @@ def generate_text_comparison(data: Dict) -> str:
         total_speedup += speedup
         count += 1
 
-        lines.extend([
-            f"Scenario {scenario_num}: {scenario_descriptions[scenario_num]}",
-            f"  Pure Python: {pp_ms:.1f}ms",
-            f"  Hybrid:      {hybrid_ms:.1f}ms",
-            f"  Pure Rust:   {rust_ms:.1f}ms ({speedup:.2f}x speedup)",
-            "",
-        ])
+        lines.extend(
+            [
+                f"Scenario {scenario_num}: {scenario_descriptions[scenario_num]}",
+                f"  Pure Python: {pp_ms:.1f}ms",
+                f"  Hybrid:      {hybrid_ms:.1f}ms",
+                f"  Pure Rust:   {rust_ms:.1f}ms ({speedup:.2f}x speedup)",
+                "",
+            ]
+        )
 
     if count > 0:
         avg_speedup = total_speedup / count
-        lines.extend([
-            f"Average Rust speedup: {avg_speedup:.2f}x across {count} scenarios",
-            "",
-        ])
+        lines.extend(
+            [
+                f"Average Rust speedup: {avg_speedup:.2f}x across {count} scenarios",
+                "",
+            ]
+        )
 
         if avg_speedup >= 2.0:
             lines.append("Verdict: Pure Rust is definitely worth it! (≥2x speedup)")
