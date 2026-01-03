@@ -49,7 +49,7 @@ def set_logger_level(verbosity: int, default: int = logging.ERROR) -> None:
 
 if HAS_TYPER:
     # CLI functions are thin wrappers around core library functions
-    cli = typer.Typer(context_settings=context_settings)
+    cli = typer.Typer(context_settings=context_settings, no_args_is_help=True)
 
     @cli.command("scan")
     def cli_scan(
