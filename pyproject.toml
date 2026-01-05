@@ -28,8 +28,8 @@ features = ["pyo3/extension-module"]
 module-name = "pathvein._pathvein_rs"
 python-source = "src"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "mypy>=1.13.0",
     "pytest>=8.3.3",
     "ruff>=0.6.9",
