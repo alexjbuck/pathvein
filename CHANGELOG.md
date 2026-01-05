@@ -1,5 +1,131 @@
 # pathvein
 
+## 0.10.0
+
+### Minor Changes
+
+- [#67](https://github.com/alexjbuck/pathvein/pull/67) [`0decdea`](https://github.com/alexjbuck/pathvein/commit/0decdea8589fe1a8918391b7f9b352e356ca812c) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Major performance improvements and quality enhancements
+
+  **Performance Improvements:**
+
+  - Replace `path.iterdir()` with `os.scandir()` for 2-3x faster directory listing
+  - Add pre-compiled pattern matching with LRU cache (10-20% faster)
+  - Expose threaded copy operations via `use_threading` parameter
+  - Bound LRU cache to prevent memory leaks (maxsize=10000)
+  - Add optional Rust backend with maturin for 5-10x performance boost
+
+  **Rust Backend:**
+
+  - Parallel directory walking using walkdir + rayon
+  - Compiled glob matching using globset (3-5x faster)
+  - Automatic fallback to pure Python when Rust not available
+  - Cross-platform support with graceful degradation
+
+  **Bug Fixes:**
+
+  - Fix missing API exports (`shuffle_to`, `shuffle_with`)
+  - Add comprehensive JSON error handling with clear messages
+  - Fix logging bugs (typo and missing parameters)
+  - Fix CLI import error without `[cli]` extra
+  - Make log file path configurable and cross-platform
+
+  **API Improvements:**
+
+  - Properly separate library and CLI with `[cli]` extra
+  - Add `get_backend_info()` to check active backend
+  - Document `assess()` function with examples
+  - Add type hints (chunk_size parameter)
+  - Improve docstrings with comprehensive examples
+
+  **Testing:**
+
+  - Add comprehensive CLI test suite (23 tests)
+  - Tests for scan and shuffle commands
+  - Tests for error handling and edge cases
+
+  **Documentation:**
+
+  - Document Rust backend with build instructions
+  - Add pattern assessment examples
+  - Improve README with installation options
+  - Add IMPROVEMENTS.md tracking future enhancements
+
+- [#68](https://github.com/alexjbuck/pathvein/pull/68) [`419cd40`](https://github.com/alexjbuck/pathvein/commit/419cd40a8a57beb3f913fffba1b976f4c5d69407) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Integrate Rust backend into core library for real-world performance gains
+
+  **Breaking Behavior Changes:**
+
+  - Library now uses Rust-backed `walk_parallel()` for directory traversal when available
+  - Pattern matching uses Rust `PatternMatcher` and `match_pattern()` for 4-7x speedup
+  - All scan and copy operations now leverage Rust optimizations automatically
+
+  **Performance Improvements:**
+
+  - Directory walking: 1.1-1.6x faster with parallel Rust implementation
+  - Pattern matching with PatternMatcher: 4-7x faster for multiple patterns
+  - Pattern matching (single): Fixed 13x regression with LRU cache, now 4x slower than Python due to FFI (use PatternMatcher instead)
+  - End-to-end scans: 1.5-2x faster overall
+  - File copy operations: Now use optimized pattern matching
+
+  **Bug Fixes:**
+
+  - Fixed scan_single_pattern benchmark to use PatternMatcher (21% improvement)
+  - Added LRU cache to Rust match_pattern to fix 13x performance regression
+
+  **API Compatibility:**
+
+  - Automatic fallback to pure Python when Rust backend unavailable
+  - No breaking API changes - all public interfaces remain the same
+  - **Cloud storage support preserved** - detects path type and uses appropriate walker:
+    - Local `Path` objects → Rust `walk_parallel()` for performance
+    - Cloud/UPath objects (S3, Azure, GCS) → Python `walk()` for compatibility
+  - Internal pattern matching migrated to `_backend.match_pattern()` and `PatternMatcher`
+
+  **Developer Experience:**
+
+  - Comprehensive benchmark suite with Python/Rust comparison
+  - Updated benchmarks to reflect actual library usage patterns
+  - Benchmark workflow now updates existing PR comments instead of spamming new ones
+
+### Patch Changes
+
+- [#69](https://github.com/alexjbuck/pathvein/pull/69) [`ec36ceb`](https://github.com/alexjbuck/pathvein/commit/ec36ceb98ae2fbc3bf25768ea28b2ed9c5db7544) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Add comprehensive documentation site with MkDocs
+
+  - Set up MkDocs with Material theme for modern documentation
+  - Add mkdocstrings for automatic API documentation from docstrings
+  - Configure mike for versioned documentation (supports main/nightly + release versions)
+  - Create comprehensive user guides for patterns, scanning, and shuffling
+  - Add full API reference with auto-generated docs from Python and Rust docstrings
+  - Integrate documentation deployment into changesets release workflow
+  - Deploy latest docs on push to main, versioned docs on release
+
+- [#71](https://github.com/alexjbuck/pathvein/pull/71) [`9449317`](https://github.com/alexjbuck/pathvein/commit/944931734714e01de38c76938df7129672efbca7) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Fix test failure: filter out special directory names from test strategies
+
+  - Update valid_name_strategy to exclude '.' and '..' as complete filenames
+  - Prevents Hypothesis from generating invalid filesystem references in tests
+  - Resolves IsADirectoryError when tests attempted to create files with these reserved names
+
+- [#48](https://github.com/alexjbuck/pathvein/pull/48) [`c0a779c`](https://github.com/alexjbuck/pathvein/commit/c0a779caf42a3422306aaf28773858df3acd63b4) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Add Cursor rules for project documentation and code style
+
+  - Add project overview rule with repository structure and workflow
+  - Add Python code style guide with modern Python practices
+  - Add framework for learning from errors and building new rules
+
+- [#48](https://github.com/alexjbuck/pathvein/pull/48) [`c0a779c`](https://github.com/alexjbuck/pathvein/commit/c0a779caf42a3422306aaf28773858df3acd63b4) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Add Cursor rule for proper changeset creation
+
+  - Add detailed guidelines for creating changesets
+  - Include examples for both monorepo and monolithic scenarios
+  - Document best practices and file naming conventions
+
+- [#74](https://github.com/alexjbuck/pathvein/pull/74) [`b8477c9`](https://github.com/alexjbuck/pathvein/commit/b8477c909196bbe71f8de37c0aae2dffffcc4378) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Show help by default when running `pathvein` without arguments
+
+  - Add `no_args_is_help=True` to Typer CLI
+  - Migrate dev dependencies from deprecated `tool.uv.dev-dependencies` to `dependency-groups.dev`
+
+- [#48](https://github.com/alexjbuck/pathvein/pull/48) [`c0a779c`](https://github.com/alexjbuck/pathvein/commit/c0a779caf42a3422306aaf28773858df3acd63b4) Thanks [@alexjbuck](https://github.com/alexjbuck)! - Move package to src/ directory structure
+  - Relocate pathvein package to src/pathvein/
+  - Update package configuration files
+  - Add bench package initialization
+
 ## 0.9.0
 
 ### Minor Changes
